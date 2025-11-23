@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aviator — Login</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-center">
+  <div class="card auth-card">
+    <h1 class="title">Login</h1>
+    <label class="field">Phone number
+      <input id="liPhone" inputmode="numeric" maxlength="13" placeholder="e.g. 0712345678">
+    </label>
+    <label class="field">Password
+      <div class="pwd-row">
+        <input id="liPass" type="password" placeholder="Password">
+        <button id="toggleLi" class="eye">👁️</button>
+      </div>
+    </label>
+    <div class="row">
+      <button id="loginBtn" class="btn">Login</button>
+      <a href="signup.html" class="link">Create account</a>
+    </div>
+    <p class="muted">Session ends when you close the tab — you will need to log in again.</p>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
