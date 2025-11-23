@@ -1,29 +1,44 @@
-const signupBox = document.getElementById('signup-box');
-const loginBox = document.getElementById('login-box');
+// signup.js
+(() => {
+  const get = id => document.getElementById(id);
+  const showSignup = get('showSignup');
+  const showLogin = get('showLogin');
+  const signupSection = get('signupSection');
+  const loginSection = get('loginSection');
+  const createBtn = get('createBtn');
+  const toggleSignupPass = get('toggleSignupPass');
+  const toggleSignupConfirm = get('toggleSignupConfirm');
 
-document.getElementById('showSignup').addEventListener('click', () => {
-    loginBox.style.display = 'none';
-    signupBox.style.display = 'block';
-});
-document.getElementById('showLogin').addEventListener('click', () => {
-    signupBox.style.display = 'none';
-    loginBox.style.display = 'block';
-});
+  showSignup.addEventListener('click', ()=>{ loginSection.classList.add('hidden'); signupSection.classList.remove('hidden'); });
+  showLogin.addEventListener('click', ()=>{ signupSection.classList.add('hidden'); loginSection.classList.remove('hidden'); });
 
-document.getElementById('signupBtn').addEventListener('click', () => {
-    const phone = document.getElementById('signupPhone').value.trim();
-    const pass = document.getElementById('signupPassword').value.trim();
-    const confirm = document.getElementById('signupConfirm').value.trim();
+  function saveAccounts(accounts){ localStorage.setItem('aviatorAccounts', JSON.stringify(accounts)); }
+  function loadAccounts(){ return JSON.parse(localStorage.getItem('aviatorAccounts')||'{}'); }
 
-    if (!phone || !pass || !confirm) { alert('Fill all fields'); return; }
-    if (pass !== confirm) { alert('Passwords do not match'); return; }
+  // toggle
+  toggleSignupPass.addEventListener('click', ()=>{
+    const el = get('signupPass'); el.type = el.type === 'password' ? 'text' : 'password';
+  });
+  toggleSignupConfirm.addEventListener('click', ()=>{
+    const el = get('signupConfirm'); el.type = el.type === 'password' ? 'text' : 'password';
+  });
 
-    let accounts = JSON.parse(localStorage.getItem('aviatorAccounts')) || {};
-    if (accounts[phone]) { alert('Account already exists'); return; }
-
+  createBtn.addEventListener('click', ()=>{
+    const phone = get('signupPhone').value.trim();
+    const pass = get('signupPass').value;
+    const confirm = get('signupConfirm').value;
+    if(!phone || !pass || !confirm){ alert('Fill all fields'); return; }
+    if(pass !== confirm){ alert('Passwords do not match'); return; }
+    const accounts = loadAccounts();
+    if(accounts[phone]){ alert('Account exists'); return; }
     accounts[phone] = { password: pass, balance: 1000 };
-    localStorage.setItem('aviatorAccounts', JSON.stringify(accounts));
-    alert('Account created! Please login.');
-    signupBox.style.display = 'none';
-    loginBox.style.display = 'block';
-});
+    saveAccounts(accounts);
+    // log to admin logs
+    const logs = JSON.parse(localStorage.getItem('aviator_logs')||'[]');
+    logs.push({type:'signup',phone, time:new Date().toISOString()});
+    localStorage.setItem('aviator_logs', JSON.stringify(logs));
+
+    alert('Account created. Please login.');
+    signupSection.classList.add('hidden'); loginSection.classList.remove('hidden');
+  });
+})();
