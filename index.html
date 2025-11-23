@@ -1,10 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Aviator</title>
-    <meta http-equiv="refresh" content="0; url=login.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Login / Signup</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="login-container">
+        <h2>Aviator Game</h2>
+        <div id="login-box">
+            <h3>Login</h3>
+            <input type="text" id="loginPhone" placeholder="Phone Number">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button id="loginBtn">Login</button>
+            <p>Don't have an account? <span id="showSignup">Create Account</span></p>
+        </div>
+
+        <div id="signup-box" style="display:none;">
+            <h3>Create Account</h3>
+            <input type="text" id="signupPhone" placeholder="Phone Number">
+            <input type="password" id="signupPassword" placeholder="Password">
+            <input type="password" id="signupConfirm" placeholder="Confirm Password">
+            <button id="signupBtn">Create Account</button>
+            <p>Already have an account? <span id="showLogin">Login</span></p>
+        </div>
+    </div>
+
+    <script src="signup.js"></script>
+    <script src="login.js"></script>
 </body>
 </html>
