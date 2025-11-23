@@ -1,63 +1,28 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aviator — Game</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="game-bg">
-  <header class="topbar">
-    <div class="top-left">
-      <button id="withdrawBtn" class="pill yellow">Withdraw</button>
-    </div>
-    <div class="top-right">
-      <div class="pill green" id="balanceP">Balance: <span id="balanceDisplay">0</span></div>
-      <button id="logoutBtn" class="btn small">Logout</button>
-    </div>
-  </header>
-
-  <main class="game-area">
-    <section class="past-multipliers" id="pastRow">Past: —</section>
-
-    <div class="aviator-box" id="planeBox">
-      <div class="multiplier-display">×<span id="liveMult">1.00</span></div>
-      <canvas id="planeCanvas" width="900" height="360"></canvas>
-    </div>
-
-    <div class="controls">
-      <div class="left-col">
-        <label>Stake
-          <input id="stakeInput" type="number" min="1" placeholder="Enter stake">
-        </label>
-        <div class="row">
-          <button id="betBtn" class="btn large">Bet</button>
-          <button id="cancelBtn" class="btn large muted" style="display:none">Cancel</button>
+<body>
+    <div class="game-container">
+        <div class="top-bar">
+            <div id="withdrawBar" class="yellow-bar">Withdraw</div>
+            <div id="balanceBar" class="green-bar">Balance: 0</div>
         </div>
-      </div>
-
-      <div class="right-col">
-        <div class="info-card">Winnings<br><strong id="winningsDisplay">0.00</strong></div>
-        <div class="info-card">Round in:<br><strong id="countdown">--</strong></div>
-      </div>
+        <div class="plane-container">
+            <img src="plane.svg" id="plane" alt="Aviator Plane">
+            <div id="liveMultiplier">×1.00</div>
+        </div>
+        <div id="pastMultipliers" class="past-multipliers"></div>
+        <div class="bottom-bar">
+            <div id="stakeBox" class="green-bar">Stake</div>
+            <div id="betBox" class="green-bar">Bet</div>
+        </div>
     </div>
 
-    <div id="msgs" class="msgs"></div>
-  </main>
-
-  <!-- withdraw modal simple -->
-  <div id="withdrawModal" class="modal" style="display:none">
-    <div class="modal-card">
-      <h3>Withdraw (simulation)</h3>
-      <input id="withdrawAmount" type="number" placeholder="Amount">
-      <div class="row">
-        <button id="proceedWithdraw" class="btn">Proceed</button>
-        <button id="closeWithdraw" class="btn muted">Close</button>
-      </div>
-      <p class="muted">This is a simulation. No real money is used.</p>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
