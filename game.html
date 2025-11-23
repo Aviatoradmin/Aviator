@@ -1,28 +1,40 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aviator Game</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Aviator — Game</title>
+<link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="game-container">
-        <div class="top-bar">
-            <div id="withdrawBar" class="yellow-bar">Withdraw</div>
-            <div id="balanceBar" class="green-bar">Balance: 0</div>
-        </div>
-        <div class="plane-container">
-            <img src="plane.svg" id="plane" alt="Aviator Plane">
-            <div id="liveMultiplier">×1.00</div>
-        </div>
-        <div id="pastMultipliers" class="past-multipliers"></div>
-        <div class="bottom-bar">
-            <div id="stakeBox" class="green-bar">Stake</div>
-            <div id="betBox" class="green-bar">Bet</div>
-        </div>
+<body class="page-game">
+  <header class="game-header">
+    <div id="withdrawBar" class="pill withdraw-pill">
+      Withdraw
+      <div id="withdrawSplit" class="withdraw-split hidden">
+        <input id="withdrawAmount" type="number" placeholder="Amount" min="1" />
+        <button id="withdrawProceed" class="btn-blue">Proceed</button>
+        <div id="withdrawStatus" class="muted small"></div>
+      </div>
+    </div>
+    <div id="balancePill" class="pill balance-pill">Balance: 0</div>
+  </header>
+
+  <main class="plane-area">
+    <div class="plane-box">
+      <canvas id="planeCanvas"></canvas>
+      <div id="multiplierDisplay" class="mult-display">×1.00</div>
     </div>
 
-    <script src="game.js"></script>
+    <div id="pastRow" class="past-row"></div>
+
+    <div class="controls-row">
+      <div id="stakeBox" class="pill stake-pill">Stake</div>
+      <div id="betBox" class="pill bet-pill">Bet</div>
+    </div>
+  </main>
+
+  <footer class="game-footer small muted">New rounds every 15s — Nairobi time. Default balance for new account: 1000</footer>
+
+<script src="game.js"></script>
 </body>
 </html>
