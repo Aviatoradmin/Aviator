@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aviator — Signup</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="page-center">
+  <div class="card auth-card">
+    <h1 class="title">Create Account</h1>
+    <label class="field">Phone number
+      <input id="suPhone" inputmode="numeric" maxlength="13" placeholder="e.g. 0712345678">
+    </label>
+    <label class="field">Password
+      <div class="pwd-row">
+        <input id="suPass" type="password" placeholder="Enter password">
+        <button id="toggleSu" class="eye">👁️</button>
+      </div>
+    </label>
+    <label class="field">Confirm Password
+      <input id="suPass2" type="password" placeholder="Confirm password">
+    </label>
+    <div class="row">
+      <button id="createBtn" class="btn">Create Account</button>
+      <a href="login.html" class="link">Already have account?</a>
+    </div>
+    <p class="muted">This demo stores accounts locally on your device only.</p>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
