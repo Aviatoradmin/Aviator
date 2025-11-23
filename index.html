@@ -1,33 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aviator Login / Signup</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Aviator — Login / Signup</title>
+<link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="login-container">
-        <h2>Aviator Game</h2>
-        <div id="login-box">
-            <h3>Login</h3>
-            <input type="text" id="loginPhone" placeholder="Phone Number">
-            <input type="password" id="loginPassword" placeholder="Password">
-            <button id="loginBtn">Login</button>
-            <p>Don't have an account? <span id="showSignup">Create Account</span></p>
-        </div>
+<body class="page-login">
+  <main class="login-root">
+    <div class="card login-card">
+      <h1>Aviator</h1>
 
-        <div id="signup-box" style="display:none;">
-            <h3>Create Account</h3>
-            <input type="text" id="signupPhone" placeholder="Phone Number">
-            <input type="password" id="signupPassword" placeholder="Password">
-            <input type="password" id="signupConfirm" placeholder="Confirm Password">
-            <button id="signupBtn">Create Account</button>
-            <p>Already have an account? <span id="showLogin">Login</span></p>
+      <section id="loginSection">
+        <h2>Login</h2>
+        <input id="loginPhone" placeholder="Phone number" inputmode="numeric" />
+        <div class="password-row">
+          <input id="loginPass" type="password" placeholder="Password" />
+          <button id="toggleLoginPass" class="eye">👁</button>
         </div>
+        <div class="row">
+          <label><input id="rememberMe" type="checkbox"/> Save password</label>
+        </div>
+        <div class="row">
+          <button id="loginBtn" class="btn">Login</button>
+        </div>
+        <p class="muted">Don't have an account? <a id="showSignup">Create account</a></p>
+      </section>
+
+      <section id="signupSection" class="hidden">
+        <h2>Create account</h2>
+        <input id="signupPhone" placeholder="Phone number" inputmode="numeric" />
+        <div class="password-row">
+          <input id="signupPass" type="password" placeholder="Password" />
+          <button id="toggleSignupPass" class="eye">👁</button>
+        </div>
+        <div class="password-row">
+          <input id="signupConfirm" type="password" placeholder="Confirm password" />
+          <button id="toggleSignupConfirm" class="eye">👁</button>
+        </div>
+        <div class="row">
+          <button id="createBtn" class="btn">Create account</button>
+        </div>
+        <p class="muted">Already have an account? <a id="showLogin">Login</a></p>
+      </section>
+
     </div>
+  </main>
 
-    <script src="signup.js"></script>
-    <script src="login.js"></script>
+<script src="signup.js"></script>
+<script src="login.js"></script>
 </body>
 </html>
