@@ -1,431 +1,99 @@
-<!doctype html>
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aviator — Plane A (Starter)</title>
-  <style>
-    :root{--bg:#000;--panel:#0b0b0b;--accent:#1db954;--danger:#ff4d4f;--gold:#f5c542}
-    html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,system-ui,Arial}
-    .app{max-width:480px;margin:0 auto;padding:12px}
-    header{display:flex;gap:8px;align-items:center;justify-content:space-between}
-    .card{background:linear-gradient(180deg,#0f0f10 0,#0a0a0a 100%);border-radius:10px;padding:10px;margin-top:10px}
-    .hidden{display:none}
-    input,button,select{font-size:16px;padding:10px;border-radius:8px;border:0;outline:none}
-    .row{display:flex;gap:8px}
-    .col{flex:1}
-    .btn{cursor:pointer}
-    .btn-primary{background:var(--accent);color:#000}
-    .btn-yellow{background:var(--gold);color:#000}
-    .btn-danger{background:var(--danger)}
-    .top-bars{display:flex;gap:8px;align-items:center}
-    .bar{padding:6px 10px;border-radius:8px;background:#111;color:#fff}
-    #planeBox{height:320px;border-radius:12px;overflow:hidden;position:relative;background:linear-gradient(180deg,#071018,#071018)}
-    canvas{display:block;width:100%;height:100%}
-    .controls{display:flex;gap:8px;align-items:center;margin-top:8px}
-    .stake{width:120px}
-    .betBox{width:140px}
-    .past{display:flex;gap:6px;overflow:auto;padding:6px 0}
-    .past .pill{padding:6px 8px;border-radius:6px;background:#0b0b0b;min-width:56px;text-align:center}
-    .footer-note{font-size:12px;color:#ccc;margin-top:10px}
-    /* simple mobile friendly */
-    @media(min-width:700px){.app{max-width:700px}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Kenya</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h3>Aviator (Plane A)</h3>
-      <div class="top-bars">
-        <div id="withdrawBar" class="bar">Withdraw</div>
-        <div id="balanceBar" class="bar">Balance: <span id="balanceView">-</span></div>
-      </div>
-    </header><div id="auth" class="card">
-  <div id="authTabs" class="row">
-    <button id="showSignup" class="btn">Create account</button>
-    <button id="showLogin" class="btn">Log in</button>
-  </div>
 
-  <div id="signupPanel" class="col">
-    <input id="suPhone" placeholder="Phone number" />
-    <div style="margin-top:8px" class="row">
-      <input id="suPassword" type="password" placeholder="Password" />
-      <button id="toggleSu" class="btn">Show</button>
+    <div id="auth-section">
+        <div class="auth-container">
+            <h2>AVIATOR</h2>
+            
+            <div class="auth-toggle">
+                <button id="btn-show-login" class="active">Login</button>
+                <button id="btn-show-register">Create Account</button>
+            </div>
+
+            <form id="register-form" class="hidden">
+                <div class="input-group">
+                    <input type="tel" id="reg-phone" placeholder="Phone Number" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="reg-pass" placeholder="Password" required>
+                    <i class="fa fa-eye" onclick="togglePass('reg-pass')"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="reg-confirm" placeholder="Confirm Password" required>
+                </div>
+                <button type="submit" class="action-btn">Create Account</button>
+            </form>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="tel" id="login-phone" placeholder="Phone Number" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="login-pass" placeholder="Password" required>
+                </div>
+                <button type="submit" class="action-btn">Log In</button>
+            </form>
+        </div>
     </div>
-    <input id="suConfirm" type="password" placeholder="Confirm password" style="margin-top:8px" />
-    <div style="margin-top:8px" class="row">
-      <button id="signupBtn" class="btn btn-primary col">Create (Balance 1000)</button>
+
+    <div id="game-section" class="hidden">
+        
+        <div class="top-bar">
+            <div class="withdraw-box" id="withdraw-btn">
+                <span>WITHDRAW</span>
+            </div>
+
+            <div class="balance-box">
+                <span class="currency">KES</span>
+                <span id="user-balance">1000.00</span>
+            </div>
+        </div>
+
+        <div class="history-bar" id="multiplier-history">
+            </div>
+
+        <div class="game-canvas-container">
+            <div id="live-counter">1.00x</div>
+            <canvas id="aviatorCanvas"></canvas>
+        </div>
+
+        <div class="controls-area">
+            
+            <div class="stake-box">
+                <label>Stake</label>
+                <div class="stake-input-wrapper">
+                    <button onclick="adjustStake(-10)">-</button>
+                    <input type="number" id="stake-amount" value="10" min="1">
+                    <button onclick="adjustStake(10)">+</button>
+                </div>
+            </div>
+
+            <button id="bet-button" class="bet-btn-green">
+                <div class="btn-top">BET</div>
+                <div class="btn-bottom" id="bet-btn-sub">NEXT ROUND</div>
+            </button>
+
+        </div>
     </div>
-  </div>
 
-  <div id="loginPanel" class="col hidden">
-    <input id="liPhone" placeholder="Phone number" />
-    <div style="margin-top:8px" class="row">
-      <input id="liPassword" type="password" placeholder="Password" />
-      <button id="toggleLi" class="btn">Show</button>
+    <div id="withdraw-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Withdraw Funds</h3>
+            <input type="number" id="withdraw-amount-input" placeholder="Enter Amount">
+            <button id="btn-proceed-withdraw">PROCEED</button>
+            <button onclick="closeWithdraw()" style="background:red; margin-top:5px;">CANCEL</button>
+        </div>
     </div>
-    <div style="margin-top:8px" class="row">
-      <button id="loginBtn" class="btn btn-primary col">Log in</button>
-    </div>
-  </div>
-</div>
 
-<div id="game" class="hidden">
-  <div id="planeBox" class="card">
-    <canvas id="planeCanvas" width="600" height="320"></canvas>
-    <div id="liveMultiplier" style="position:absolute;left:12px;top:8px;font-weight:700">×1.00</div>
-  </div>
-
-  <div class="card controls">
-    <div class="col">
-      <div class="row">
-        <input id="stakeInput" class="stake" placeholder="Stake" type="number" min="1" />
-        <div id="betBtn" class="bar betBox">Bet</div>
-        <div id="depositBtn" class="bar">Deposit</div>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <div id="cashoutBtn" class="bar betBox btn-yellow hidden">Cash out <div id="cashoutVal"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="past" id="pastList"></div>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <button id="logoutBtn" class="btn btn-danger">Log out</button>
-      <button id="adminOpen" class="btn">Admin</button>
-    </div>
-  </div>
-
-  <div class="footer-note">We keep your data secure and confidential.</div>
-</div>
-
-<div id="adminPanel" class="card hidden">
-  <h4>Admin Panel</h4>
-  <div id="playersTable"></div>
-  <div style="margin-top:8px">
-    <button id="closeAdmin" class="btn">Close</button>
-  </div>
-</div>
-
-  </div>  <script>
-    // ---- Utility / storage ----
-    const STORAGE_KEY_USERS = 'aviator_users_v1';
-    const STORAGE_KEY_ROUNDS = 'aviator_rounds_v1';
-
-    function loadUsers(){return JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)||'{}')}
-    function saveUsers(u){localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(u))}
-
-    // ---- Auth UI ----
-    const showSignup = document.getElementById('showSignup');
-    const showLogin = document.getElementById('showLogin');
-    const signupPanel = document.getElementById('signupPanel');
-    const loginPanel = document.getElementById('loginPanel');
-
-    showSignup.onclick = ()=>{signupPanel.classList.remove('hidden');loginPanel.classList.add('hidden')}
-    showLogin.onclick = ()=>{loginPanel.classList.remove('hidden');signupPanel.classList.add('hidden')}
-
-    document.getElementById('toggleSu').onclick = ()=>{
-      const p = document.getElementById('suPassword'); p.type = p.type==='password'?'text':'password'
-    }
-    document.getElementById('toggleLi').onclick = ()=>{
-      const p = document.getElementById('liPassword'); p.type = p.type==='password'?'text':'password'
-    }
-
-    document.getElementById('signupBtn').onclick = ()=>{
-      const phone = document.getElementById('suPhone').value.trim();
-      const pass = document.getElementById('suPassword').value;
-      const conf = document.getElementById('suConfirm').value;
-      if(!phone||!pass||pass!==conf){alert('Invalid signup');return}
-      const users = loadUsers();
-      if(users[phone]){alert('Account exists');return}
-      users[phone] = {phone, password:pass, balance:1000, createdAt:new Date().toISOString()}
-      saveUsers(users);
-      // send to admin by saving to storage for admin view
-      localStorage.setItem('lastSubmittedToAdmin','signup:'+phone+':'+new Date().toISOString())
-      alert('Account created — balance 1000');
-    }
-
-    document.getElementById('loginBtn').onclick = ()=>{
-      const phone = document.getElementById('liPhone').value.trim();
-      const pass = document.getElementById('liPassword').value;
-      const users = loadUsers();
-      if(!users[phone]||users[phone].password !== pass){alert('Invalid cred');return}
-      // login
-      sessionStorage.setItem('aviator_logged', phone);
-      showGameFor(phone);
-    }
-
-    document.getElementById('logoutBtn').onclick = ()=>{sessionStorage.removeItem('aviator_logged');location.reload()}
-
-    function showGameFor(phone){
-      document.getElementById('auth').classList.add('hidden');
-      document.getElementById('game').classList.remove('hidden');
-      document.getElementById('adminPanel').classList.add('hidden');
-      currentUser = loadUsers()[phone];
-      updateBalanceView();
-      startEngine();
-    }
-
-    // ---- Admin ----
-    document.getElementById('adminOpen').onclick = ()=>{
-      document.getElementById('adminPanel').classList.remove('hidden');
-      renderPlayers();
-    }
-    document.getElementById('closeAdmin').onclick = ()=>{document.getElementById('adminPanel').classList.add('hidden')}
-
-    function renderPlayers(){
-      const users = loadUsers();
-      let html = '<table style="width:100%"><tr><th>Phone</th><th>Balance</th><th>Created</th></tr>';
-      for(const k in users){
-        html += `<tr><td>${k}</td><td>${users[k].balance}</td><td>${new Date(users[k].createdAt).toLocaleString('en-KE',{timeZone:'Africa/Nairobi'})}</td></tr>`
-      }
-      html += '</table>';
-      document.getElementById('playersTable').innerHTML = html;
-    }
-
-    // ---- Game engine ----
-    const canvas = document.getElementById('planeCanvas');
-    const ctx = canvas.getContext('2d');
-    const planeImg = new Image();
-    planeImg.src = 'planeA.png'; // add to repo root
-
-    let currentUser = null;
-    let roundState = {
-      status:'idle', // 'idle','countdown','running','busted'
-      timeToStart:5, // seconds countdown between rounds
-      startAt:0,
-      generatedMultiplier:2.5,
-      roundId:0
-    }
-
-    // stake / bet logic
-    let userBet = null; // {phone,amount,joinedAtRoundId,joinedWhen}
-
-    document.getElementById('betBtn').onclick = ()=>{
-      const phone = sessionStorage.getItem('aviator_logged'); if(!phone) return alert('Login');
-      const stake = Number(document.getElementById('stakeInput').value);
-      const users = loadUsers();
-      if(!stake || stake<=0) return alert('Enter stake');
-      if(stake>users[phone].balance) return alert('Insufficient');
-      if(roundState.status === 'running'){
-        // join current round immediately
-        userBet = {phone, amount:stake, roundId: roundState.roundId, status:'active'};
-        users[phone].balance -= stake; saveUsers(users); updateBalanceView();
-        // show cancel? per spec, during countdown allow cancel
-        showBetUI(true);
-      } else if(roundState.status==='countdown'){
-        // join next round (pending)
-        userBet = {phone, amount:stake, roundId: roundState.roundId+1, status:'pending'};
-        showBetUI(true,true);
-      } else {
-        // idle -> bet for next
-        userBet = {phone, amount:stake, roundId: roundState.roundId+1, status:'pending'};
-        showBetUI(true,true);
-      }
-    }
-
-    function showBetUI(hasBet, pending=false){
-      const betBtn = document.getElementById('betBtn');
-      const cashout = document.getElementById('cashoutBtn');
-      if(!hasBet){betBtn.classList.remove('hidden');cashout.classList.add('hidden');return}
-      // if pending show Cancel/waiting
-      if(pending){betBtn.textContent='Cancel\nWaiting for next round';betBtn.style.background='#330000';}
-      else{betBtn.classList.add('hidden');cashout.classList.remove('hidden');}
-    }
-
-    document.getElementById('cashoutBtn').onclick = ()=>{
-      if(!userBet) return;
-      if(userBet.status !== 'active') return;
-      // compute current multiplier
-      const mul = currentLiveMultiplier();
-      const win = Math.floor(mul * userBet.amount);
-      const users = loadUsers();
-      users[userBet.phone].balance += win;
-      saveUsers(users); updateBalanceView();
-      // clear bet
-      userBet = null; showBetUI(false);
-      alert('Cashed out: '+win);
-    }
-
-    // cancel pending
-    document.getElementById('betBtn').addEventListener('click', ()=>{
-      const btn = document.getElementById('betBtn');
-      if(userBet && userBet.status==='pending'){
-        userBet = null; showBetUI(false);
-      }
-    })
-
-    // withdraw flow simple modal-like
-    document.getElementById('withdrawBar').onclick = ()=>{
-      const phone = sessionStorage.getItem('aviator_logged'); if(!phone){alert('Login');return}
-      const users = loadUsers();
-      const amt = Number(prompt('Enter withdraw amount (<= balance)'));
-      if(!amt||amt<=0) return;
-      if(amt>users[phone].balance) return alert('Insufficient');
-      users[phone].balance -= amt; saveUsers(users); updateBalanceView();
-      alert('Withdraw submitted');
-      // record for admin
-      const rounds = JSON.parse(localStorage.getItem(STORAGE_KEY_ROUNDS)||'[]');
-      rounds.push({type:'withdraw',phone,amount:amt,at:new Date().toISOString()});
-      localStorage.setItem(STORAGE_KEY_ROUNDS, JSON.stringify(rounds));
-    }
-
-    function updateBalanceView(){
-      if(!currentUser) return;
-      const users = loadUsers();
-      const me = users[currentUser.phone] || currentUser;
-      document.getElementById('balanceView').textContent = me.balance;
-    }
-
-    // Past multipliers store
-    function pushPast(mult){
-      const arr = JSON.parse(localStorage.getItem('aviator_past')||'[]');
-      arr.unshift({m:mult,at:new Date().toISOString()});
-      while(arr.length>50) arr.pop();
-      localStorage.setItem('aviator_past', JSON.stringify(arr));
-      renderPast();
-    }
-    function renderPast(){
-      const arr = JSON.parse(localStorage.getItem('aviator_past')||'[]');
-      const container = document.getElementById('pastList'); container.innerHTML='';
-      for(let i=0;i<Math.min(10,arr.length);i++){
-        const pill = document.createElement('div'); pill.className='pill'; pill.textContent = '×'+arr[i].m.toFixed(2);
-        container.appendChild(pill);
-      }
-    }
-
-    // deterministic generated multiplier based on Nairobi minute — ensures clients see same value
-    function generatedMultiplierForEpoch(epochMs){
-      // epochMs is floored to minute: use minute value as seed
-      const d = new Date(epochMs);
-      const seed = d.getUTCFullYear()+d.getUTCMonth()+d.getUTCDate()+d.getUTCHours()+d.getUTCMinutes();
-      // simple PRNG
-      let x = (seed * 9301 + 49297) % 233280;
-      const r = x/233280;
-      // map r in (1.1, 10) but skewed so big multipliers rarer
-      const val = 1 + Math.pow(r,3) * 15; // 1 -> ~16
-      return Math.max(1.1, Math.round(val*100)/100);
-    }
-
-    function getNairobiNow(){
-      // compute time in Africa/Nairobi by using UTC and adding +3
-      const now = new Date();
-      const utc = now.getTime() + (now.getTimezoneOffset()*60000);
-      const nairobi = new Date(utc + 3*3600*1000);
-      return nairobi;
-    }
-
-    // live multiplier calculation based on progress 0..1 and generated multiplier
-    function currentLiveMultiplier(){
-      // plane progress from start (1.00) rising smoothly until generated and then bust
-      const gs = roundState.generatedMultiplier;
-      const elapsed = (Date.now() - roundState.startAt)/1000; // seconds
-      const duration = Math.max(3, Math.log(gs+1)*2 + 2); // arbitrary mapping
-      const t = Math.min(1, elapsed/duration);
-      const live = 1 + (gs-1)*easeOutCubic(t);
-      return Math.max(1, Math.round(live*100)/100);
-    }
-
-    function easeOutCubic(t){return 1 - Math.pow(1-t,3)}
-
-    // engine: rounds every 8s (5s countdown + run time)
-    function startEngine(){
-      // start loop
-      roundLoop(); setInterval(roundLoop, 1000);
-      requestAnimationFrame(drawLoop);
-      renderPast();
-    }
-
-    function roundLoop(){
-      const nairobi = getNairobiNow();
-      const minuteMs = Math.floor(nairobi.getTime()/60000)*60000;
-      // generated is deterministic per minute -> same for everyone during that minute
-      roundState.generatedMultiplier = generatedMultiplierForEpoch(minuteMs);
-      // manage statuses: naive state machine
-      const secondsInMinute = Math.floor(nairobi.getTime()/1000) % 60;
-      const countdown = 5 - (secondsInMinute % 8); // simple 8s cycle
-      if(countdown>0){roundState.status='countdown'; roundState.timeToStart=countdown;}
-      else { // running
-        if(roundState.status !== 'running'){
-          roundState.status='running'; roundState.startAt=Date.now(); roundState.roundId++;
-          // if userBet was pending and matched roundId -> join and deduct
-          if(userBet && userBet.status==='pending' && userBet.roundId === roundState.roundId){
-            const users = loadUsers();
-            const u = users[userBet.phone];
-            if(u && u.balance >= userBet.amount){ u.balance -= userBet.amount; saveUsers(users); updateBalanceView(); userBet.status='active'; }
-            else{ userBet = null; }
-          }
-        }
-        // check for bust
-        const live = currentLiveMultiplier();
-        if(live >= roundState.generatedMultiplier){
-          // bust - round ends
-          roundState.status='busted';
-          pushPast(roundState.generatedMultiplier);
-          // if userBet active and not cashed out -> lost (already deducted)
-          userBet = null; showBetUI(false);
-          // store result for admin
-          const rounds = JSON.parse(localStorage.getItem(STORAGE_KEY_ROUNDS)||'[]');
-          rounds.unshift({roundId:roundState.roundId,m:roundState.generatedMultiplier,at:new Date().toISOString()});
-          localStorage.setItem(STORAGE_KEY_ROUNDS, JSON.stringify(rounds.slice(0,200)));
-        }
-      }
-      document.getElementById('liveMultiplier').textContent = '×'+currentLiveMultiplier().toFixed(2);
-    }
-
-    function drawLoop(){
-      // draw plane moving along curve
-      const W = canvas.width = canvas.clientWidth*devicePixelRatio;
-      const H = canvas.height = canvas.clientHeight*devicePixelRatio;
-      ctx.clearRect(0,0,W,H);
-
-      // compute plane progress x 0..1 as function of time in running or in idle
-      let progress = 0;
-      if(roundState.status==='running'){
-        const elapsed = (Date.now()-roundState.startAt)/1000;
-        const duration = Math.max(3, Math.log(roundState.generatedMultiplier+1)*2 + 2);
-        progress = Math.min(1, elapsed/duration*0.9 + 0.1);
-      } else {
-        // idle slowly loop
-        progress = (Date.now()/5000)%1*0.5 + 0.1;
-      }
-
-      // map progress to diagonal path inside canvas with vertical oscillation after 0.75
-      const pad = 30*devicePixelRatio;
-      const start = {x:pad, y:H - pad};
-      const end = {x: W - pad, y: pad};
-      // linear along diagonal
-      let x = start.x + (end.x - start.x)*progress;
-      let y = start.y + (end.y - start.y)*progress;
-      if(progress > 0.75){
-        const t = (progress-0.75)/0.25;
-        // vertical up/down wave
-        const wave = Math.sin((Date.now()/300))*40*devicePixelRatio*(0.5 + 0.5*t);
-        y = Math.min(H-pad, Math.max(pad, y + wave*(t)));
-      }
-
-      // draw plane image centered
-      const pw = 120*devicePixelRatio; const ph = 60*devicePixelRatio;
-      ctx.save();
-      // rotate slightly in direction of travel
-      const angle = Math.atan2((end.y-start.y),(end.x-start.x))*0.8;
-      ctx.translate(x,y); ctx.rotate(angle);
-      ctx.drawImage(planeImg, -pw/2, -ph/2, pw, ph);
-      ctx.restore();
-
-      requestAnimationFrame(drawLoop);
-    }
-
-    // start if user already logged in
-    const logged = sessionStorage.getItem('aviator_logged');
-    if(logged){
-      const users = loadUsers();
-      if(users[logged]){ currentUser = users[logged]; showGameFor(logged); }
-    }
-  </script></body>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="script.js"></script>
+</body>
 </html>
