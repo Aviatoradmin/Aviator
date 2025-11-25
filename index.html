@@ -5,15 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Aviator</title>
     <style>
-        /* --- CSS STYLING --- */
+        /* --- CSS STYLING: Mobile-First Layout --- */
         :root {
             --bg-color: #000000;
-            --panel-bg: #1b1b1b;
+            --login-bg: #000080; /* Blue login page as requested */
             --primary-red: #E23D3D;
             --success-green: #28a745;
             --btn-yellow: #ffc107;
+            --btn-blue: #007bff;
             --text-white: #ffffff;
             --text-grey: #888888;
+            --panel-bg: #151515;
         }
 
         body, html {
@@ -25,7 +27,6 @@
             font-family: 'Arial', sans-serif;
             color: var(--text-white);
             overflow: hidden;
-            user-select: none; /* Prevent text selection */
         }
 
         /* --- LOGIN / AUTH SCREEN --- */
@@ -35,7 +36,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #0f0f0f; /* Blueish tint requested? Keeping dark for game feel */
+            background: var(--login-bg);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -44,7 +45,7 @@
         }
 
         .auth-box {
-            width: 80%;
+            width: 85%;
             max-width: 350px;
             background: #222;
             padding: 20px;
@@ -74,13 +75,8 @@
 
         .btn-primary { background: var(--success-green); color: white; }
         .btn-secondary { background: #444; color: white; }
-
-        .toggle-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+        .password-toggle { position: absolute; right: 25px; top: 12px; cursor: pointer; color: #aaa; }
+        .input-group { position: relative; display: flex; align-items: center; justify-content: center; }
 
         /* --- GAME INTERFACE --- */
         #game-screen {
@@ -88,11 +84,12 @@
             flex-direction: column;
             height: 100%;
             width: 100%;
+            background: black; /* General page color black */
         }
 
         /* TOP BAR (25% height approx split) */
         .top-bar {
-            height: 60px;
+            height: 50px;
             display: flex;
             justify-content: space-between;
             padding: 10px;
@@ -101,19 +98,19 @@
         }
 
         .stat-box {
-            border-radius: 20px;
+            border-radius: 5px;
             padding: 8px 15px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
             min-width: 100px;
+            cursor: pointer;
         }
 
         #withdraw-btn {
             background: var(--btn-yellow);
             color: black;
-            cursor: pointer;
             position: relative;
         }
 
@@ -122,32 +119,37 @@
             color: white;
         }
 
-        /* PAST MULTIPLIERS */
+        /* PAST MULTIPLIERS (vii) */
         .history-bar {
             height: 30px;
             background: #111;
             display: flex;
             align-items: center;
-            overflow: hidden;
-            padding-left: 10px;
-            gap: 5px;
+            overflow-x: scroll;
+            padding: 0 10px;
+            gap: 8px;
+            white-space: nowrap;
         }
+        .history-bar::-webkit-scrollbar { display: none; } /* Hide scrollbar */
+
 
         .history-pill {
             background: #333;
             padding: 2px 8px;
             border-radius: 10px;
-            font-size: 10px;
+            font-size: 12px;
+            flex-shrink: 0;
             color: #ccc;
         }
         .history-pill.high { color: var(--primary-red); }
 
-        /* GAME CANVAS (Main Area) */
+        /* GAME CANVAS (50% height approx) */
         .game-area {
             flex-grow: 1;
             position: relative;
             background: black;
             overflow: hidden;
+            height: 50vh; /* Approximate half screen height */
         }
 
         canvas {
@@ -158,7 +160,7 @@
 
         .center-info {
             position: absolute;
-            top: 20%;
+            top: 25%;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
@@ -169,6 +171,7 @@
             font-size: 60px;
             font-weight: bold;
             color: white;
+            transition: color 0.2s;
         }
 
         #game-status {
@@ -179,26 +182,26 @@
 
         /* BOTTOM CONTROLS (25% approx) */
         .control-panel {
-            background: #151515;
+            background: var(--panel-bg);
             padding: 15px;
             display: flex;
             justify-content: space-between;
             gap: 10px;
-            height: 120px;
-            align-items: center;
-            border-top: 2px solid #333;
+            height: calc(25vh - 60px); /* Adjust to fit screen */
+            align-items: flex-start;
+            border-top: 1px solid #333;
         }
 
-        /* Left: Stake Input */
+        /* Left: Stake Input (vii) */
         .stake-container {
             flex: 1;
             background: #222;
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            height: 80%;
+            height: 100%;
         }
 
         .stake-label { font-size: 12px; color: #888; margin-bottom: 5px; }
@@ -207,76 +210,68 @@
             background: black;
             border: 1px solid #444;
             color: white;
-            font-size: 20px;
+            font-size: 18px;
             width: 100%;
             text-align: center;
             padding: 5px 0;
-            border-radius: 5px;
+            border-radius: 4px;
         }
-
-        /* Right: Big Button */
+        
+        /* Right: Big Button (vi) */
         .action-btn-container {
             flex: 1.5;
-            height: 80%;
+            height: 100%;
         }
 
         #main-action-btn {
             width: 100%;
             height: 100%;
             border: none;
-            border-radius: 10px;
-            font-size: 22px;
+            border-radius: 8px;
+            font-size: 20px;
             font-weight: bold;
             color: white;
-            background: var(--success-green); /* Default Bet Green */
+            background: var(--success-green);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 4px 0 #1e7e34;
             transition: all 0.1s;
         }
 
-        #main-action-btn:active {
-            transform: translateY(4px);
-            box-shadow: none;
-        }
-
         /* Button States */
-        .btn-bet { background: var(--success-green) !important; box-shadow: 0 4px 0 #1e7e34 !important; }
-        .btn-cashout { background: var(--btn-yellow) !important; color: black !important; box-shadow: 0 4px 0 #d39e00 !important; }
-        .btn-cancel { background: var(--primary-red) !important; box-shadow: 0 4px 0 #bd2130 !important; }
+        .btn-bet { background: var(--success-green); }
+        .btn-cashout { background: var(--btn-yellow); color: black !important; }
+        .btn-cancel { background: var(--primary-red); }
 
         .btn-subtext { font-size: 12px; font-weight: normal; opacity: 0.8; margin-top: 5px; }
 
-        /* Withdrawal Popover */
+        /* Withdrawal Modal (iii) */
         #withdraw-modal {
             position: absolute;
-            top: 70px;
-            left: 10px;
+            top: 50px;
+            left: 0;
             background: #2a2a2a;
             padding: 10px;
             border-radius: 8px;
             display: none;
             z-index: 200;
-            width: 200px;
+            width: 180px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
         .proceed-btn {
-            background: #007bff;
+            background: var(--btn-blue);
             color: white;
             border: none;
-            padding: 5px;
+            padding: 8px;
             width: 100%;
-            margin-top: 5px;
+            margin-top: 8px;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
         }
-
-        /* Admin Data (Hidden generally, but included for logic) */
-        #admin-log { display: none; }
 
     </style>
 </head>
@@ -284,22 +279,37 @@
 
     <div id="auth-screen">
         <h2 style="color:white; margin-bottom:30px;">AVIATOR</h2>
+        
+        <div class="toggle-container" style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn btn-primary" onclick="toggleAuthMode('login')" id="login-toggle-btn">Login</button>
+            <button class="btn btn-secondary" onclick="toggleAuthMode('signup')" id="signup-toggle-btn">Create Account</button>
+        </div>
+
         <div class="auth-box" id="login-box">
-            <h3>Login</h3>
+            <h3 style="color:white;">Player Login</h3>
             <input type="tel" id="login-phone" class="auth-input" placeholder="Phone Number">
-            <input type="password" id="login-pass" class="auth-input" placeholder="Password">
+            <div class="input-group">
+                <input type="password" id="login-pass" class="auth-input" placeholder="Password">
+                <span class="password-toggle material-icons" onclick="togglePasswordVisibility('login-pass')">👁️</span>
+            </div>
             <button class="btn btn-primary" onclick="handleLogin()">Log In</button>
-            <button class="btn btn-secondary" onclick="toggleAuthMode('signup')">Create Account</button>
         </div>
 
         <div class="auth-box" id="signup-box" style="display:none;">
-            <h3>Create Account</h3>
+            <h3 style="color:white;">Create Account</h3>
             <input type="tel" id="signup-phone" class="auth-input" placeholder="Phone Number">
-            <input type="password" id="signup-pass" class="auth-input" placeholder="Password">
-            <input type="password" id="signup-confirm" class="auth-input" placeholder="Confirm Password">
-            <label style="color:#888; font-size:12px;"><input type="checkbox" onclick="togglePassVisibility()"> Show Password</label>
+            <div class="input-group">
+                <input type="password" id="signup-pass" class="auth-input" placeholder="Password">
+                <span class="password-toggle material-icons" onclick="togglePasswordVisibility('signup-pass')">👁️</span>
+            </div>
+            <div class="input-group">
+                <input type="password" id="signup-confirm" class="auth-input" placeholder="Confirm Password">
+                <span class="password-toggle material-icons" onclick="togglePasswordVisibility('signup-confirm')">👁️</span>
+            </div>
+            <label style="color:#aaa; font-size:12px; display:block; text-align:left; margin-top:5px;">
+                <input type="checkbox" id="save-password-signup" style="margin-right:5px;"> Save Password to browser (Optional)
+            </label>
             <button class="btn btn-primary" onclick="handleSignup()">Register</button>
-            <button class="btn btn-secondary" onclick="toggleAuthMode('login')">Back to Login</button>
         </div>
     </div>
 
@@ -309,7 +319,7 @@
             <div class="stat-box" id="withdraw-btn" onclick="toggleWithdrawModal()">
                 Withdraw
                 <div id="withdraw-modal">
-                    <input type="number" id="withdraw-amount" placeholder="Amount" class="auth-input" style="width:90%; margin:0;">
+                    <input type="number" id="withdraw-amount" placeholder="Enter amount" class="auth-input" style="width:90%; margin:0 0 5px 0;">
                     <button class="proceed-btn" onclick="processWithdraw()">PROCEED</button>
                 </div>
             </div>
@@ -321,9 +331,8 @@
 
         <div class="game-area" id="game-area">
             <div class="center-info">
-                <div id="game-status">WAITING FOR NEXT ROUND</div>
+                <div id="game-status"></div>
                 <div id="live-multiplier">1.00x</div>
-                <div id="loading-bar" style="height:4px; background:red; width:0%; transition: width 0.1s;"></div>
             </div>
             <canvas id="gameCanvas"></canvas>
         </div>
@@ -331,29 +340,32 @@
         <div class="control-panel">
             <div class="stake-container">
                 <div class="stake-label">STAKE</div>
-                <input type="number" id="stake-input" value="10.00" min="1">
+                <input type="number" id="stake-input" value="10.00" min="1" step="0.01" oninput="updateBetAmount()">
                 <div style="display:flex; justify-content:space-around; margin-top:5px;">
-                    <button style="background:#333; border:none; color:#fff; border-radius:4px;" onclick="adjustStake(-5)">-</button>
-                    <button style="background:#333; border:none; color:#fff; border-radius:4px;" onclick="adjustStake(5)">+</button>
+                    <button style="background:#333; border:none; color:#fff; border-radius:4px; padding:5px; flex:1; margin-right:5px;" onclick="adjustStake(-10)">-10</button>
+                    <button style="background:#333; border:none; color:#fff; border-radius:4px; padding:5px; flex:1;" onclick="adjustStake(10)">+10</button>
                 </div>
             </div>
 
             <div class="action-btn-container">
                 <button id="main-action-btn" onclick="handleMainAction()">
                     <span id="btn-text">BET</span>
-                    <span id="btn-sub" class="btn-subtext">Next Round</span>
+                    <span id="btn-sub" class="btn-subtext">10.00</span>
                 </button>
             </div>
         </div>
     </div>
 
+    <div id="admin-log" style="display:none;"></div>
+
     <script>
-        /** * --- LOGIC & STATE MANAGEMENT --- 
+        /** * --- JAVASCRIPT LOGIC --- 
          */
         
-        // --- USER STATE ---
+        // --- USER & ADMIN STATE ---
         let currentUser = null;
         let balance = 1000.00;
+        let adminData = JSON.parse(localStorage.getItem('adminLog')) || { users: {}, withdrawals: [], multipliers: [] };
 
         // --- GAME STATE ---
         const STATE_WAITING = 0; // 5 second countdown
@@ -365,42 +377,54 @@
         let crashPoint = 1.00;
         
         // --- BETTING STATE ---
-        let stakeAmount = 10.00;
-        let activeBet = null; // The bet placed for the current LIVE round
-        let nextRoundBet = null; // The bet queued for the NEXT round
+        let stakeAmount = 10.00; // Amount from Stake Box
+        let activeBet = null;    // Bet that is currently deducted and riding
+        let nextRoundBet = null; // Bet queued for the next round
         
-        // --- TIMING & LOOP ---
+        // --- TIMING & CANVAS ---
         let lastTime = 0;
         let countdownTimer = 5.00;
         let planeX = 0;
         let planeY = 0;
         let animationId;
 
-        // --- CANVAS SETUP ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
         function resizeCanvas() {
             canvas.width = document.getElementById('game-area').clientWidth;
             canvas.height = document.getElementById('game-area').clientHeight;
+            if (gameState === STATE_WAITING || gameState === STATE_BURST) {
+                // Reset plane position when resizing if not flying
+                planeX = 0;
+                planeY = canvas.height;
+            }
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
+        function updateStakeAmount() {
+            stakeAmount = parseFloat(document.getElementById('stake-input').value) || 0;
+            if (!activeBet && !nextRoundBet) {
+                document.getElementById('btn-sub').innerText = stakeAmount.toFixed(2);
+            }
+        }
+        document.getElementById('stake-input').addEventListener('input', updateStakeAmount);
+
         /* =========================================
-           1. AUTHENTICATION LOGIC
+           A. AUTHENTICATION LOGIC
            ========================================= */
-        
+
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
         function toggleAuthMode(mode) {
             document.getElementById('login-box').style.display = mode === 'login' ? 'block' : 'none';
             document.getElementById('signup-box').style.display = mode === 'signup' ? 'block' : 'none';
-        }
-
-        function togglePassVisibility() {
-            const p1 = document.getElementById('signup-pass');
-            const p2 = document.getElementById('signup-confirm');
-            p1.type = p1.type === 'password' ? 'text' : 'password';
-            p2.type = p2.type === 'password' ? 'text' : 'password';
+            document.getElementById('login-toggle-btn').className = mode === 'login' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('signup-toggle-btn').className = mode === 'signup' ? 'btn btn-primary' : 'btn btn-secondary';
         }
 
         function handleSignup() {
@@ -408,33 +432,37 @@
             const pass = document.getElementById('signup-pass').value;
             const confirm = document.getElementById('signup-confirm').value;
 
-            if(pass !== confirm) { alert("Passwords do not match"); return; }
-            if(!phone || !pass) { alert("Fill all fields"); return; }
+            if (pass !== confirm) { alert("Passwords do not match"); return; }
+            if (!phone || !pass) { alert("Fill all fields"); return; }
+            if (adminData.users[phone]) { alert("Account already exists for this number."); return; }
 
-            // Save to LocalStorage (Simulating DB)
-            const user = { phone, pass, balance: 1000 };
-            localStorage.setItem('user_' + phone, JSON.stringify(user));
+            // Save to Admin Log (Simulated)
+            adminData.users[phone] = { phone, pass, balance: 1000.00 };
+            localStorage.setItem('adminLog', JSON.stringify(adminData));
+            
+            // Save to LocalStorage for the user's login state
+            localStorage.setItem('user_' + phone, JSON.stringify(adminData.users[phone]));
+
+            console.log(`[ADMIN LOG] New User Created: Phone: ${phone}, Pass: ${pass}`);
             
             alert("Account created! Please log in.");
             toggleAuthMode('login');
-            
-            // ADMIN SIMULATION: Log new user
-            console.log("[ADMIN] New User Registered:", phone);
         }
 
         function handleLogin() {
             const phone = document.getElementById('login-phone').value;
             const pass = document.getElementById('login-pass').value;
             
-            const storedData = localStorage.getItem('user_' + phone);
-            if (!storedData) { alert("User not found"); return; }
-
-            const user = JSON.parse(storedData);
-            if (user.pass !== pass) { alert("Wrong password"); return; }
+            const userData = adminData.users[phone];
+            
+            if (!userData || userData.pass !== pass) { 
+                alert("Invalid Phone Number or Password."); 
+                return; 
+            }
 
             // Success
-            currentUser = user;
-            balance = user.balance;
+            currentUser = userData;
+            balance = userData.balance;
             updateBalanceUI();
             
             document.getElementById('auth-screen').style.display = 'none';
@@ -442,41 +470,58 @@
             
             resizeCanvas();
             startGameLoop();
-            
-            // Check if we should logout on visibility change
-            document.addEventListener("visibilitychange", () => {
-                if (document.visibilityState === 'hidden') {
-                    // User left tab or minimized
-                    alert("Session timed out for security. Please log in again.");
-                    location.reload();
-                }
-            });
         }
 
+        function logOut() {
+            currentUser = null;
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('auth-screen').style.display = 'flex';
+            // Clear current bet states
+            activeBet = null;
+            nextRoundBet = null;
+        }
+
+        // Re-login check on visiting other links/apps
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'hidden' && currentUser) {
+                // Simulate log out when user leaves
+                logOut();
+                alert("Session expired. Please log in again.");
+            }
+        });
+
         /* =========================================
-           2. GAME LOOP & LOGIC
+           B. GAME LOOP & LOGIC
            ========================================= */
 
-        // Generate a crash point based on time (Nairobi Sim)
-        // This ensures users roughly see the same result without a server
+        // Generate Multiplier based on current minute in Nairobi time (UTC+3)
+        // This simulates synchronization without a server.
         function generateCrashPoint() {
-            // Use current time rounded to 10 seconds as seed
-            const seed = Math.floor(Date.now() / 10000); 
-            // Simple pseudo-random generator based on seed
-            const x = Math.sin(seed++) * 10000;
+            const now = new Date();
+            // Get current time in Nairobi (UTC+3)
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const nairobiTime = new Date(utc + (3600000 * 3));
+            
+            // Seed based on minute/second
+            const seed = (nairobiTime.getMinutes() * 60) + nairobiTime.getSeconds();
+            
+            // Simple PRNG (Pseudo-Random Number Generator)
+            const x = Math.sin(seed * 10) * 10000;
             let random = x - Math.floor(x); // 0.0 to 1.0
             
             // Aviator Logic: 
-            // 1% chance of instant burst (1.00)
-            // Otherwise generated using exponential distribution
-            // E = 1 / (1-r) roughly
-            
             let multiplier = 0.99 / (1 - random);
-            if(multiplier < 1) multiplier = 1;
-            if(random < 0.05) multiplier = 1.00; // Occasional instant loss
-            
-            // Cap at sensible high
-            if(multiplier > 100) multiplier = 100;
+
+            // Ensure minimum 1.00x and apply a soft cap for stability
+            if(multiplier < 1.00) multiplier = 1.00;
+            if(multiplier > 50.00) multiplier = 50.00; 
+
+            // Save multiplier and time to Admin log
+            adminData.multipliers.push({
+                time: nairobiTime.toISOString(),
+                crash: multiplier.toFixed(2)
+            });
+            localStorage.setItem('adminLog', JSON.stringify(adminData));
             
             return parseFloat(multiplier.toFixed(2));
         }
@@ -502,17 +547,13 @@
             }
 
             updateUI();
-            requestAnimationFrame(update);
+            animationId = requestAnimationFrame(update);
         }
 
         function updateWaiting(dt) {
             countdownTimer -= dt;
             
-            // Logic for next round bet
-            // Users can cancel or bet during this time
-            
             if (countdownTimer <= 0) {
-                // START FLIGHT
                 startFlight();
             }
         }
@@ -524,42 +565,46 @@
             planeX = 0;
             planeY = canvas.height;
 
-            // ADMIN VIEW
-            console.log(`[ADMIN] Round Started. Will crash at: ${crashPoint}x`);
-
-            // Process Queue Bet
+            // Process Queued Bet (The successful stake logic)
             if (nextRoundBet) {
                 activeBet = nextRoundBet; // Move queued bet to active
                 nextRoundBet = null; // Clear queue
                 
-                // Deduct Balance HERE (as per requirement logic: deduct when round starts/joined)
+                // DEDUCT BALANCE (Stake deducted immediately when round starts)
                 balance -= activeBet.amount;
                 updateBalanceUI();
             }
         }
 
         function updateFlying(dt) {
-            // Increase Multiplier (Exponential curve)
-            currentMultiplier += (currentMultiplier * 0.15 * dt) + 0.001;
-            
-            // Move Plane
-            // X Axis: Moves right until 75% of screen
-            const maxX = canvas.width * 0.75;
-            const speedX = canvas.width * 0.2; // Speed across screen
-            
+            // Live Multiplier calculation (close to linear/exponential)
+            // Multiplier rate increases slightly over time
+            const rate = 0.5 + (currentMultiplier / 100); 
+            currentMultiplier += rate * dt;
+
+            // --- Plane Movement (i) ---
+            const W = canvas.width;
+            const H = canvas.height;
+            const maxX = W * 0.75; // 3/4 of its path diagonal
+            const t = currentMultiplier - 1.0; // Time factor since 1.00x
+
+            // 1. Diagonal movement (up to 3/4 distance)
             if (planeX < maxX) {
-                planeX += speedX * dt;
-                // Diagonal Up
-                planeY = canvas.height - (planeX * 0.8); // Linear diagonal
+                // x increases with increasing increment
+                planeX = (W / crashPoint) * t * 10;
+                // y reduces with increasing reduction (diagonal path)
+                planeY = H - (planeX * (H / W) * 1.5); 
+                if (planeY < H * 0.25) planeY = H * 0.25; // Don't go too high initially
+                if (planeX > maxX) planeX = maxX; // Cap X at 3/4
             } else {
-                // Waving Motion
+                // 2. Smooth Wave Motion (after 3/4 distance)
                 planeX = maxX;
-                // Smooth Sine wave oscillation
-                const waveSpeed = 3;
-                const waveHeight = 50;
-                // Base height + Sine wave
-                const baseHeight = canvas.height * 0.25; // Stay high up
-                planeY = baseHeight + Math.sin(Date.now() / 300) * waveHeight;
+                const waveAmplitude = H * 0.15; // Vertical distance up/down
+                const waveFrequency = 5;
+                const baseHeight = H * 0.3; 
+                
+                // Up/Down smooth movement
+                planeY = baseHeight + waveAmplitude * Math.sin(t * waveFrequency);
             }
 
             drawPlane(planeX, planeY);
@@ -580,60 +625,70 @@
             pill.className = 'history-pill ' + (crashPoint >= 2.0 ? 'high' : '');
             pill.innerText = crashPoint.toFixed(2) + 'x';
             hist.prepend(pill);
+            // Limit to 10 past multipliers
             if(hist.children.length > 10) hist.removeChild(hist.lastChild);
 
             // Handle Loss logic
             if (activeBet) {
-                // If activeBet still exists, they didn't cash out. LOSS.
-                activeBet = null;
+                // Active bet still exists = loss (money was already deducted)
+                activeBet = null; 
             }
+
+            // Simulate plane disappearing
+            setTimeout(() => {
+                if(gameState === STATE_BURST) {
+                    // Start countdown to next round
+                    gameState = STATE_WAITING; 
+                }
+            }, 2000); 
         }
 
         function updateBurst(dt) {
-            // Plane flies off screen rapidly
-            planeX += 1000 * dt;
-            planeY -= 500 * dt;
+            // Plane quickly flies off screen
+            planeX += 500 * dt;
+            planeY -= 200 * dt;
             drawPlane(planeX, planeY);
-
-            // 2 second pause before countdown starts again
-            if (planeX > canvas.width + 200) {
-                // Wait slightly then go to waiting
-                setTimeout(() => {
-                    if(gameState === STATE_BURST) gameState = STATE_WAITING;
-                }, 2000);
-            }
         }
 
         /* =========================================
-           3. DRAWING (VISUALS)
+           DRAWING THE PLANE (i)
            ========================================= */
         function drawPlane(x, y) {
-            ctx.fillStyle = "#E23D3D"; // Red Plane
+            ctx.fillStyle = "transparent";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Trajectory Line (Rope holding plane to 0,0)
+            ctx.strokeStyle = "#444444";
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            // Simple Plane Shape
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - 30, y + 10);
-            ctx.lineTo(x - 30, y - 10);
-            ctx.fill();
+            ctx.moveTo(0, canvas.height); // Start (bottom left corner of the box)
             
-            // Trajectory Line (Curve)
-            ctx.strokeStyle = "#E23D3D";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height);
-            ctx.quadraticCurveTo(x/2, canvas.height, x, y);
+            // Draw a smooth curve up to the current plane position
+            const cpX = x * 0.5; // Control point for smooth curve
+            const cpY = canvas.height;
+            ctx.quadraticCurveTo(cpX, cpY, x, y);
             ctx.stroke();
 
-            // Show Multiplier above plane if flying
+            // Red Plane Shape (Simple Triangle for performance)
+            ctx.fillStyle = var(--primary-red);
+            ctx.beginPath();
+            ctx.moveTo(x + 10, y);
+            ctx.lineTo(x - 20, y - 5);
+            ctx.lineTo(x - 20, y + 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Live Multiplier text flying with plane
             if (gameState === STATE_FLYING) {
                 ctx.fillStyle = "white";
-                ctx.font = "bold 20px Arial";
-                ctx.fillText(currentMultiplier.toFixed(2) + "x", x - 20, y - 20);
+                ctx.font = "bold 24px Arial";
+                const multiText = currentMultiplier.toFixed(2) + "x";
+                ctx.fillText(multiText, x, y - 30);
             }
         }
 
         /* =========================================
-           4. BETTING & CONTROLS LOGIC
+           BETTING & UI LOGIC (vi, vii)
            ========================================= */
         
         function updateUI() {
@@ -642,57 +697,60 @@
             const btn = document.getElementById('main-action-btn');
             const btnText = document.getElementById('btn-text');
             const btnSub = document.getElementById('btn-sub');
+            
+            // Ensure stake amount is synced to the input field
+            updateStakeAmount();
 
             if (gameState === STATE_WAITING) {
+                // 5 second countdown (time to bet)
                 statusEl.innerText = "STARTING IN " + Math.ceil(countdownTimer) + "s";
-                statusEl.style.color = "white";
-                multiEl.innerText = "WAITING";
-                document.getElementById('loading-bar').style.width = ((5 - countdownTimer)/5 * 100) + "%";
-                
-                // BUTTON LOGIC IN WAITING
+                statusEl.style.color = var(--btn-yellow);
+                multiEl.innerText = "1.00x";
+                multiEl.style.color = "white";
+
                 if (nextRoundBet) {
-                    // User has placed a bet for the coming round
+                    // Player has pressed BET during countdown
                     btn.className = "btn-cancel";
                     btnText.innerText = "CANCEL";
-                    btnSub.innerText = "Waiting for round";
+                    btnSub.innerText = "Waiting for next round";
                 } else {
-                    // Standard Bet Button
+                    // Normal BET state
                     btn.className = "btn-bet";
                     btnText.innerText = "BET";
-                    btnSub.innerText = "Next Round";
+                    btnSub.innerText = stakeAmount.toFixed(2);
                 }
 
             } else if (gameState === STATE_FLYING) {
                 statusEl.innerText = "LIVE ROUND";
-                statusEl.style.color = "#28a745";
+                statusEl.style.color = var(--success-green);
                 multiEl.innerText = currentMultiplier.toFixed(2) + "x";
+                multiEl.style.color = currentMultiplier >= 2.0 ? var(--primary-red) : var(--success-green);
                 
-                // BUTTON LOGIC IN FLYING
                 if (activeBet) {
-                    // User is IN the game
-                    btn.className = "btn-cashout";
-                    // Calculate potential win
+                    // Player is IN the game (Cash Out state)
                     const winAmount = (activeBet.amount * currentMultiplier).toFixed(2);
+                    btn.className = "btn-cashout";
                     btnText.innerText = "CASH OUT";
-                    btnSub.innerText = winAmount;
+                    btnSub.innerText = winAmount; // Real-time calculated winnings
                 } else if (nextRoundBet) {
-                    // User bet for NEXT round while this one is flying
+                    // Player missed the round but pressed BET for the next one
                     btn.className = "btn-cancel";
                     btnText.innerText = "CANCEL";
                     btnSub.innerText = "Wait for next round";
                 } else {
-                    // User missed round, can bet for next
+                    // Player missed the round, can BET for next
                     btn.className = "btn-bet";
                     btnText.innerText = "BET";
-                    btnSub.innerText = "For Next Round";
+                    btnSub.innerText = stakeAmount.toFixed(2);
                 }
 
             } else if (gameState === STATE_BURST) {
                 statusEl.innerText = "FLEW AWAY @ " + crashPoint.toFixed(2) + "x";
-                statusEl.style.color = "#E23D3D"; // Red
+                statusEl.style.color = var(--primary-red);
                 multiEl.innerText = crashPoint.toFixed(2) + "x";
+                multiEl.style.color = var(--primary-red);
                 
-                // Button behaves same as Waiting/End of round
+                // Button state reverts to normal bet/cancel queue
                 if (nextRoundBet) {
                     btn.className = "btn-cancel";
                     btnText.innerText = "CANCEL";
@@ -700,73 +758,63 @@
                 } else {
                     btn.className = "btn-bet";
                     btnText.innerText = "BET";
-                    btnSub.innerText = "Next Round";
+                    btnSub.innerText = stakeAmount.toFixed(2);
                 }
             }
         }
 
         // Handle Main Button Click
         function handleMainAction() {
-            const amount = parseFloat(document.getElementById('stake-input').value);
-
             // 1. CASHOUT (Priority if Flying and Active)
             if (gameState === STATE_FLYING && activeBet) {
-                // SUCCESS!
+                // Successful Cash Out
                 const winnings = activeBet.amount * currentMultiplier;
                 balance += winnings;
                 updateBalanceUI();
-                activeBet = null; // Bet finished
-                
-                // ADMIN: Log Win
-                console.log(`[ADMIN] User Won: ${winnings}`);
+                activeBet = null;
                 return;
             }
 
-            // 2. CANCEL (If waiting for next round)
+            // 2. CANCEL (If queued bet exists in ANY state other than active flying)
             if (nextRoundBet) {
-                // If cancelling a queued bet
-                nextRoundBet = null;
-                // Note: Balance wasn't deducted yet according to logic prompt
-                // (Prompt said deduct immediately when round STARTS for active bets)
-                // BUT prompt also said "receives back balance".
-                // To simplify: We deduct when moving from Queue -> Active. 
-                // So if it's just queued, we just remove the queue. No money moved yet.
+                // Withdraw from the coming draw (no balance change since not deducted yet)
+                nextRoundBet = null; 
                 return;
             }
 
-            // 3. PLACE BET (Queue for next round)
-            if (!nextRoundBet && !activeBet) {
-                if (amount > balance) { alert("Insufficient Balance"); return; }
+            // 3. PLACE BET (Queue for next round / Immediate Bet if in WAITING)
+            if (!activeBet && !nextRoundBet) {
+                if (stakeAmount <= 0) { alert("Stake cannot be zero."); return; }
+                if (stakeAmount > balance) { alert("Insufficient Balance."); return; }
                 
-                // Create Queued Bet
-                nextRoundBet = { amount: amount };
+                nextRoundBet = { amount: stakeAmount };
                 
-                // If we are in WAITING phase (5s countdown), we can treat this as joining the coming draw
-                // Logic check: Prompt says deduct immediately if clicked during waiting? 
-                // Let's follow the "Deduct when round starts" logic for safety, 
-                // unless user specifically wants immediate deduction. 
-                // The visual cue "Waiting for next round" implies queue.
+                // If clicked during the ongoing draw, they see CANCEL immediately (handled by updateUI)
+                // If clicked during the 5s WAITING, they also see CANCEL immediately (handled by updateUI)
             }
         }
 
         function adjustStake(val) {
             let v = parseFloat(document.getElementById('stake-input').value);
+            v = isNaN(v) ? 0 : v;
             v += val;
-            if(v < 1) v = 1;
-            document.getElementById('stake-input').value = v;
+            if (v < 1) v = 1;
+            document.getElementById('stake-input').value = v.toFixed(2);
+            updateStakeAmount();
         }
 
         function updateBalanceUI() {
             document.getElementById('balance-display').innerText = balance.toFixed(2);
-            // Sync to storage
+            // Sync user data to admin log and local storage
             if(currentUser) {
-                currentUser.balance = balance;
-                localStorage.setItem('user_' + currentUser.phone, JSON.stringify(currentUser));
+                adminData.users[currentUser.phone].balance = balance;
+                localStorage.setItem('adminLog', JSON.stringify(adminData));
+                localStorage.setItem('user_' + currentUser.phone, JSON.stringify(adminData.users[currentUser.phone]));
             }
         }
 
         /* =========================================
-           5. WITHDRAWAL LOGIC
+           WITHDRAWAL LOGIC (iii)
            ========================================= */
         function toggleWithdrawModal() {
             const modal = document.getElementById('withdraw-modal');
@@ -775,30 +823,40 @@
 
         function processWithdraw() {
             const amt = parseFloat(document.getElementById('withdraw-amount').value);
-            if (isNaN(amt) || amt <= 0) return;
-            if (amt > balance) { alert("Insufficient Balance"); return; }
+            if (isNaN(amt) || amt <= 0) { alert("Enter a valid amount."); return; }
+            if (amt > balance) { alert("Insufficient Balance."); return; }
 
             // Deduct
             balance -= amt;
             updateBalanceUI();
 
-            // UI Feedback
-            const btn = document.querySelector('.proceed-btn');
-            const originalText = btn.innerText;
-            btn.style.background = "green";
-            btn.innerText = "SUBMITTED";
+            // Record in Admin Log (Simulating submission to GitHub/Email)
+            const withdrawalRecord = {
+                user: currentUser.phone,
+                amount: amt.toFixed(2),
+                time: new Date().toISOString()
+            };
+            adminData.withdrawals.push(withdrawalRecord);
+            localStorage.setItem('adminLog', JSON.stringify(adminData));
+            console.log(`[ADMIN LOG] Withdrawal Request: ${JSON.stringify(withdrawalRecord)}`);
 
-            // ADMIN LOG (Simulating Email)
-            console.log(`[ADMIN EMAIL] WITHDRAW REQUEST: User ${currentUser.phone} requested ${amt}.`);
+            // UI Feedback
+            const btn = document.querySelector('#withdraw-modal .proceed-btn');
+            const originalText = btn.innerText;
+            btn.style.background = var(--success-green);
+            btn.innerText = "SUBMITTED";
 
             setTimeout(() => {
                 toggleWithdrawModal();
                 btn.innerText = originalText;
-                btn.style.background = "#007bff";
+                btn.style.background = var(--btn-blue);
                 document.getElementById('withdraw-amount').value = "";
             }, 1500);
         }
 
+        // Initialize UI
+        updateBalanceUI();
+        toggleAuthMode('login');
     </script>
 </body>
 </html>
