@@ -728,8 +728,8 @@
   withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy). GitHub will log the click.'); });
   depositBtn.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
-    const amt = Number(prompt('Enter amount to deposit (demo):', '100')) || 0;
-    if(amt<=0) return;
+    const amt = Number(prompt('Enter amount to deposit :', '100')) || 0;
+    if(amt=0) return;
     accounts = loadAccounts();
     accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
     saveAccounts(accounts);
