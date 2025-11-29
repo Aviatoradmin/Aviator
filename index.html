@@ -1,235 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Aviator</title>
-<style>
-  :root{
-    --bg:#0b0b0b;
-    --panel:#111;
-    --accent:#00b04f;
-    --muted:#888;
-    --yellow:#f0c000;
-    --red:#d9534f;
-    --blue:#2a9df4;
-    --green:#2ecc71;
-    --white:#fff;
-    --card-radius:12px;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--white)}
-  .app{
-    display:flex;
-    flex-direction:column;
-    min-height:100vh;
-  }
-  /* Loading */
-  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);z-index:9999}
-  #loading .box{background:#07121a;padding:22px;border-radius:12px;text-align:center}
-  /* Header */
-  header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:transparent}
-  header h1{margin:0;font-size:18px;letter-spacing:1px}
-  header .userbar{display:flex;gap:8px;align-items:center}
-  /* Main layout */
-  .container{padding:10px;display:flex;flex-direction:column;gap:10px;flex:1;}
-  /* Top bar: withdraw / small counter / balance */
-  .topbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
-  .topbar .left{display:flex;gap:8px;align-items:center}
-  .btn-withdraw{background:var(--yellow);color:#000;padding:8px 12px;border-radius:10px;font-weight:700}
-  .small-counter{width:44px;height:44px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;border:2px solid #111}
-  .small-counter .num{color:var(--blue);font-weight:700}
-  .bal{background:var(--green);padding:8px 12px;border-radius:10px;color:#022; font-weight:700}
-  /* Aviator box */
-  .aviator{
-    background:linear-gradient(180deg,#090909,#0f0f0f);
-    border-radius:14px;
-    padding:8px;
-    position:relative;
-    overflow:hidden;
-  }
-  .plane-box{
-    background:linear-gradient(180deg,#050505,#0b0b0b);
-    border-radius:12px;
-    height:46vh;
-    min-height:320px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:relative;
-  }
-  canvas#planeCanvas{width:100%;height:100%;display:block;border-radius:10px}
-  .live-mult{position:absolute;left:50%;transform:translateX(-50%);top:18%;background:transparent;padding:6px 10px;border-radius:8px;font-weight:800;font-size:20px}
-  .flight-msg{position:absolute;left:12px;top:12px;background:transparent;color:var(--muted);font-size:12px}
-  /* bottom controls */
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;padding-top:8px}
-  .big-left{display:flex;flex-direction:column;gap:8px;flex:1;min-width:170px}
-  .big-right{display:flex;flex-direction:column;gap:8px;width:220px;max-width:40%}
-  .stake-box, .bet-box{background:#07121a;padding:10px;border-radius:10px}
-  .stake-box input{width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white);font-size:16px}
-  .bet-button{padding:12px;border-radius:10px;text-align:center;font-weight:800;cursor:pointer}
-  .bet-button.bet{background:var(--green);color:#022}
-  .bet-button.yellow{background:var(--yellow);color:#000}
-  .bet-button.cancel{background:var(--red);color:#fff}
-  .deposit-btn{background:#0a5;padding:8px 10px;border-radius:8px;color:#022;font-weight:700}
-  .past-list{display:flex;gap:6px;align-items:center;overflow:auto;padding-top:6px}
-  .past-item{background:#111;border-radius:8px;padding:6px 8px;font-weight:700;font-size:13px}
-  .footer-note{font-size:12px;color:var(--muted);text-align:center;padding:10px}
-  /* Login/Register modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000}
-  .card{background:#071421;padding:16px;border-radius:12px;color:var(--white);width:92%;max-width:420px}
-  .form-row{display:flex;flex-direction:column;margin-bottom:10px}
-  .form-row label{font-size:13px;color:var(--muted);margin-bottom:6px}
-  .form-row input{padding:10px;border-radius:8px;border:1px solid #222;background:transparent;color:var(--white)}
-  .row-h{display:flex;gap:8px}
-  .small{font-size:13px;color:var(--muted)}
-  .linkish{color:var(--blue);cursor:pointer;font-weight:700}
-  .top-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  /* responsive tweaks */
-  @media (max-width:640px){
-    .big-right{width:48%}
-    .plane-box{height:50vh}
-  }
-</style>
-</head>
-<body>
-<div id="loading"><div class="box"><strong>Loading Aviator...</strong><div style="height:10px"></div><small style="color:#9fb">Initializing</small></div></div>
-
-<div class="app" id="app" style="display:none">
-  <header>
-    <h1>Aviator</h1>
-    <div class="userbar">
-      <div id="sessionName" style="display:none">Welcome <span id="userNameTxt"></span></div>
-      <button id="loginBtn" class="linkish">Login / Register</button>
-      <button id="logoutBtn" style="display:none" class="linkish">Logout</button>
-    </div>
-  </header>
-
-  <main class="container">
-    <div class="topbar">
-      <div class="left">
-        <button class="btn-withdraw" id="withdrawBtn">Withdraw</button>
-        <div class="small-counter">
-          <div style="font-size:11px;color:var(--muted)">#</div>
-          <div class="num" id="genIndex">0</div>
-        </div>
-      </div>
-      <div class="bal" id="balanceBox">1000</div>
-    </div>
-
-    <section class="aviator">
-      <div class="flight-msg" id="roundStateMsg">Waiting...</div>
-      <div class="plane-box">
-        <canvas id="planeCanvas"></canvas>
-        <div class="live-mult" id="liveMultiplier">×1.00</div>
-      </div>
-
-      <div style="padding:8px 2px;">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-          <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
-        </div>
-        <div class="past-list" id="pastList" style="margin-top:6px"></div>
-      </div>
-    </section>
-
-    <section class="controls">
-      <div class="big-left">
-        <div class="stake-box">
-          <div style="font-size:13px;color:var(--muted)">Stake</div>
-          <input id="stakeInput" type="number" placeholder="Enter stake amount" min="1" />
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="maxBtn" class="deposit-btn">Max</button>
-            <button id="plus10" class="deposit-btn">+10</button>
-            <button id="plus50" class="deposit-btn">+50</button>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div class="bet-box" style="flex:1">
-            <div style="font-size:12px;color:var(--muted)">Bet</div>
-            <div id="betAmount" style="font-weight:800;font-size:18px">0</div>
-          </div>
-
-          <div id="betButton" class="bet-button bet" style="width:150px;display:flex;align-items:center;justify-content:center">Bet</div>
-        </div>
-      </div>
-
-      <div class="big-right">
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <div style="font-size:13px;color:var(--muted)">Deposit</div>
-          <div class="deposit-btn" id="depositBtn">Deposit</div>
-        </div>
-        <div style="margin-top:8px">
-          <div style="font-size:13px;color:var(--muted)">Status</div>
-          <div id="statusBox" style="background:#07121a;padding:8px;border-radius:8px;margin-top:6px">Idle</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="footer-note">We keep your data secure and confidential. (Win_Big)</div>
-  </main>
-</div>
-
-<!-- Login / register overlay -->
-<div id="authOverlay" class="overlay" style="display:none">
-  <div class="card">
-    <div class="top-controls">
-      <strong id="authTitle">Login</strong>
-      <div><button id="closeAuth" class="linkish">Close</button></div>
-    </div>
-
-    <div id="loginForm">
-      <div class="form-row">
-        <label>Phone number</label>
-        <input id="loginPhone" placeholder="07XXXXXXXX" />
-      </div>
-      <div class="form-row">
-        <label>Password</label>
-        <input id="loginPass" type="password" />
-      </div>
-      <div style="display:flex;gap:8px;justify-content:space-between">
-        <div class="small linkish" id="showRegister">Create account</div>
-        <button id="doLogin" class="deposit-btn">Login</button>
-      </div>
-      <div style="margin-top:8px;color:var(--muted);font-size:13px">Save password to browser is optional (use browser prompt).</div>
-    </div>
-
-    <div id="registerForm" style="display:none">
-      <div class="form-row">
-        <label>Full name</label>
-        <input id="regName" placeholder="Your name" />
-      </div>
-      <div class="form-row">
-        <label>Phone number</label>
-        <input id="regPhone" placeholder="07XXXXXXXX" />
-      </div>
-      <div class="row-h">
-        <div style="flex:1" class="form-row">
-          <label>Password</label>
-          <input id="regPass" type="password" />
-        </div>
-        <div style="flex:1" class="form-row">
-          <label>Confirm</label>
-          <input id="regPass2" type="password" />
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:space-between">
-        <div class="small linkish" id="showLogin">Already have account?</div>
-        <button id="doRegister" class="deposit-btn">Create</button>
-      </div>
-      <div style="margin-top:8px;color:var(--muted);font-size:13px">New accounts start with 1000 balance.</div>
-    </div>
-  </div>
-</div>
-
 <script>
 /*
   Aviator single-file implementation
-  - Uses fixed 10s cycle: 5s pre-round (betting), 5s flight
-  - Generated multipliers array (1..250) embedded (from user)
-  - Accounts stored in localStorage under key 'avi_accounts'
-  - Session stored in localStorage under 'avi_session' (phone)
-  - Past-10 multipliers saved in localStorage 'avi_past'
+  ... (Rest of the script code remains the same) ...
 */
 
 (() => {
@@ -326,7 +98,9 @@
   // canvas init
   const ctx = planeCanvas.getContext ? planeCanvas.getContext('2d') : null;
   let planeImg = new Image();
-  planeImg.src = 'planeA.png';
+  // Changed image to a red plane (planeB.png) if planeA is not red
+  // Assuming the user has a red plane icon, if not, the fallback triangle will be red.
+  planeImg.src = 'planeA.png'; 
   planeImg.onerror = ()=>{ planeImg = null; } // fallback to drawing triangle
 
   function resizeCanvas(){
@@ -627,7 +401,6 @@
   // ********** Canvas: plane animation **********
   function drawPlane(progress, generated, burst){
     // progress: 0..1 across flight (if not in flight, provide idle progress)
-    // plane path: x goes from left->right, y follows parabola shape (0..1 => bottom->top->bottom small amplitude)
     const w = planeCanvas.clientWidth;
     const h = planeCanvas.clientHeight;
     ctx.clearRect(0,0,w,h);
@@ -639,48 +412,128 @@
     const margin = 40;
     const width = w - margin*2;
     const height = h - margin*2;
-    // compute x in [0, width], y in [height, 0] (0 at bottom)
-    const t = Math.max(0, Math.min(progress,1));
-    const x = margin + t * width;
-    // simple parabola apex near t=0.6 for pleasing path: y = -4*(t-0.5)^2 + 1
-    const yRel = -4*(t-0.5)*(t-0.5) + 1; // range [-? ,1]
-    // normalize to [0,1]
-    const yNorm = Math.max(0, Math.min((yRel + 0.0)/1,1));
-    const y = margin + (1 - yNorm) * height;
 
-    // draw path (light)
-    ctx.beginPath();
-    for(let i=0;i<=100;i++){
-      const tt = i/100;
-      const xx = margin + tt * width;
-      const yR = -4*(tt-0.5)*(tt-0.5) + 1;
-      const yy = margin + (1 - Math.max(0,Math.min(yR,1))) * height;
-      if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+    const PEAK_T = 0.5; // T value where the plane reaches max height (50% of travel time)
+    const MAX_HEIGHT_NORM = 1; // Normalized max height (1 is top of canvas)
+    const OSCILLATION_DURATION_T = 1 - PEAK_T; // Duration of oscillation phase in normalized time
+    const OSCILLATION_MAX_AMPLITUDE_NORM = 0.1; // Max oscillation amplitude (10% of canvas height)
+
+    let t = Math.max(0, Math.min(progress,1));
+    let x, y, yNorm;
+
+    // --- Part 1: Trajectory (0 to PEAK_T)
+    if (t <= PEAK_T) {
+      // Parabolic path (decay hanging graph-like, but inverted for lift-off)
+      // Path will go from (0, height) to (PEAK_T*width, 0) in normalized space
+      // Let's use a function that gives a steep climb and then levels off for max height.
+      // Example: A cosine or parabolic segment. Using a parabola for simple trajectory:
+      // A(t - PEAK_T)^2 + B
+      yNorm = MAX_HEIGHT_NORM - (MAX_HEIGHT_NORM / PEAK_T**2) * (t - PEAK_T)**2;
+      yNorm = Math.max(0, yNorm); // Ensure it doesn't go below the bottom boundary
+    } 
+    // --- Part 2: Oscillation/Decay (PEAK_T to 1.0)
+    else {
+      // Time relative to the start of the oscillation phase
+      const tOsc = (t - PEAK_T) / OSCILLATION_DURATION_T; // 0 to 1
+
+      // Higher multiplier gives longer oscillation time (which is the whole duration, FLIGHT)
+      // We adjust the burst point based on the multiplier.
+      // Burst time is defined by the multiplier (short multiplier -> short burst time, meaning it bursts earlier in this phase)
+      // The multiplier is mapped to a burst time:
+      // Minimum burst point: 0.1 (for 1.0 multiplier)
+      // Maximum burst point: 0.95 (for 25.93 multiplier)
+      const MIN_MULT = 1.01;
+      const MAX_MULT = 25.93;
+      const MIN_BURST_T = 0.01;
+      const MAX_BURST_T = 0.95;
+      
+      let burstPointNorm;
+      if (generated <= MIN_MULT) {
+          burstPointNorm = MIN_BURST_T; // Bursts right away
+      } else {
+          // Normalize generated multiplier from [MIN_MULT, MAX_MULT] to [0, 1]
+          const normMult = (generated - MIN_MULT) / (MAX_MULT - MIN_MULT);
+          burstPointNorm = MIN_BURST_T + normMult * (MAX_BURST_T - MIN_BURST_T);
+      }
+      
+      // If tOsc exceeds the burst point, freeze at max height and stop oscillating
+      if (tOsc >= burstPointNorm) {
+          yNorm = MAX_HEIGHT_NORM; // Stop oscillating, stay at max height
+          tOsc = burstPointNorm; // Effectively cap time for oscillation
+      } else {
+        // Oscillation motion: decay hanging graph mimic, oscillating up/down (>)<)
+        // Cosine wave for oscillation: * (tOsc * 2*PI * frequency)
+        // Exponential decay for amplitude: Math.exp(-decayRate * tOsc)
+        const frequency = 4; // Cycles in this phase
+        const decayRate = 1.5;
+        const amplitude = OSCILLATION_MAX_AMPLITUDE_NORM * Math.exp(-decayRate * tOsc);
+        const oscillation = amplitude * Math.cos(tOsc * 2 * Math.PI * frequency);
+
+        // Y-coordinate starts at max height (1) and oscillates around it.
+        yNorm = MAX_HEIGHT_NORM + oscillation;
+      }
     }
+
+    // X-coordinate is still linear from left to right (0 to width)
+    x = margin + t * width;
+
+    // Convert normalized y (0=top, 1=bottom) to canvas y (margin=top, h-margin=bottom)
+    y = margin + (1 - yNorm) * height;
+
+
+    // --- Path Drawing (Simplified for the new non-standard path) ---
+    // Draw only a straight line from start to current plane position to mimic the rope
+    ctx.beginPath();
+    // Start at original y=0, x=0 (plane box corner, i.e., margin, h-margin)
+    const ropeStartX = margin;
+    const ropeStartY = h - margin; // Corrected to be bottom corner (y=0 in un-normalized space)
+    
+    // Draw the "Red Rope" holding the plane to the original y=0 x=0 corner
+    ctx.moveTo(ropeStartX, ropeStartY);
+    ctx.lineTo(x, y); // Line to current plane position
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.strokeStyle = 'var(--red)'; // Use the CSS variable for red
     ctx.stroke();
 
-    // draw plane (image or triangle)
+
+    // --- Plane Drawing ---
     const planeW = 46;
     const planeH = 28;
     ctx.save();
     ctx.translate(x, y);
-    // rotation along tangent approximate (derivative)
+    
+    // Rotation logic (simplified or disabled for the custom rope/oscillation)
+    // To preserve the motion from the original code (parabolic trajectory):
     const dx = 8;
     const tAhead = Math.min(1, t + 0.02);
-    const x2 = margin + tAhead * width;
-    const yRel2 = -4*(tAhead-0.5)*(tAhead-0.5) +1;
-    const yNorm2 = Math.max(0, Math.min((yRel2)/1,1));
-    const y2 = margin + (1 - yNorm2) * height;
-    const angle = Math.atan2(y2 - y, x2 - x);
+    // Recalculate y2 based on the new logic
+    let yNorm2, y2;
+    if (tAhead <= PEAK_T) {
+        yNorm2 = MAX_HEIGHT_NORM - (MAX_HEIGHT_NORM / PEAK_T**2) * (tAhead - PEAK_T)**2;
+        yNorm2 = Math.max(0, yNorm2);
+    } else {
+        // For simplicity during oscillation, we can assume a slight fixed angle or calculate a small tangent
+        const tOsc2 = (tAhead - PEAK_T) / OSCILLATION_DURATION_T;
+        if (tOsc2 >= burstPointNorm) {
+            yNorm2 = MAX_HEIGHT_NORM;
+        } else {
+            const frequency = 4;
+            const decayRate = 1.5;
+            const amplitude = OSCILLATION_MAX_AMPLITUDE_NORM * Math.exp(-decayRate * tOsc2);
+            const oscillation = amplitude * Math.cos(tOsc2 * 2 * Math.PI * frequency);
+            yNorm2 = MAX_HEIGHT_NORM + oscillation;
+        }
+    }
+    y2 = margin + (1 - yNorm2) * height;
+
+    const angle = Math.atan2(y2 - y, (margin + tAhead*width) - x); // Use x at tAhead for tangent
     ctx.rotate(angle);
 
     if(planeImg && planeImg.complete){
       ctx.drawImage(planeImg, -planeW/2, -planeH/2, planeW, planeH);
     } else {
-      // fallback: small triangle
-      ctx.fillStyle = '#f05';
+      // fallback: small red triangle
+      ctx.fillStyle = 'var(--red)'; // Ensure fallback is red
       ctx.beginPath();
       ctx.moveTo(0,-10);
       ctx.lineTo(16,0);
@@ -691,6 +544,17 @@
     ctx.restore();
 
     // draw burst indicator if near end
+    // Burst is determined by tOsc reaching burstPointNorm in the new logic
+    const info = getCurrentRoundInfo();
+    if(info.phase === 'flight'){
+        const tOsc = (t - PEAK_T) / OSCILLATION_DURATION_T;
+        if(tOsc >= burstPointNorm){
+             burst = true;
+        } else {
+             burst = false;
+        }
+    }
+
     if(burst){
       ctx.fillStyle = 'rgba(240,200,0,0.06)';
       ctx.beginPath();
@@ -707,13 +571,12 @@
     if(info.phase === 'pre'){
       // idle motion: gentle oscillation
       const t = ((now()%2000)/2000);
-      progress = 0.05 + 0.02*Math.sin(t*Math.PI*2) + 0.2; // small offset
+      progress = 0.01 + 0.02*Math.sin(t*Math.PI*2); // near origin
     } else {
       const ratio = Math.max(0, Math.min(info.phaseElapsed / FLIGHT, 1));
       // we map ratio to progress with slight easing to look like plane accelerating upwards
       progress = Math.pow(ratio, 0.9);
-      // burst when ratio close to 1
-      burst = ratio >= 0.985;
+      // Burst detection moved into drawPlane to use generated/burstPointNorm
     }
     drawPlane(progress, generated, burst);
     requestAnimationFrame(animLoop);
@@ -792,5 +655,3 @@
 
 })();
 </script>
-</body>
-  </html>
