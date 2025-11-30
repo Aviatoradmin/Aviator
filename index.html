@@ -57,7 +57,8 @@
     justify-content:center;
     position:relative;
   }
-  canvas#planeCanvas{width:100%;height:100%;display:block;border-radius:10px}
+  /* REMOVED PLANE ANIMATION: Hiding canvas completely */
+  canvas#planeCanvas{width:100%;height:100%;display:none;border-radius:10px}
   .live-mult{position:absolute;left:50%;transform:translateX(-50%);top:18%;background:transparent;padding:6px 10px;border-radius:8px;font-weight:800;font-size:20px}
   .flight-msg{position:absolute;left:12px;top:12px;background:transparent;color:var(--muted);font-size:12px}
   /* bottom controls */
@@ -170,7 +171,6 @@
   </main>
 </div>
 
-<!-- Login / register overlay -->
 <div id="authOverlay" class="overlay" style="display:none">
   <div class="card">
     <div class="top-controls">
@@ -324,15 +324,14 @@
   let activeBet = null;
 
   // canvas init
-  const ctx = planeCanvas.getContext ? planeCanvas.getContext('2d') : null;
-  let planeImg = new Image();
-  planeImg.src = 'planeA.png';
-  planeImg.onerror = ()=>{ planeImg = null; } // fallback to drawing triangle
+  // REMOVED PLANE ANIMATION: Remove ctx initialization
+  // const ctx = planeCanvas.getContext ? planeCanvas.getContext('2d') : null;
 
   function resizeCanvas(){
-    planeCanvas.width = planeCanvas.clientWidth * devicePixelRatio;
-    planeCanvas.height = planeCanvas.clientHeight * devicePixelRatio;
-    ctx && ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    // REMOVED PLANE ANIMATION: Removed canvas resize logic
+    // planeCanvas.width = planeCanvas.clientWidth * devicePixelRatio;
+    // planeCanvas.height = planeCanvas.clientHeight * devicePixelRatio;
+    // ctx && ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
   window.addEventListener('resize', resizeCanvas);
 
@@ -566,13 +565,14 @@
 
     // update phase text / timer
     if(info.phase === 'pre'){
-      roundStateMsg.textContent = 'Betting — place stake';
+      // CHANGE 2 & 3: Keep pre-round countdown, change message
+      roundStateMsg.textContent = 'Betting — Next round starts in';
       roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
       liveMultiplierEl.textContent = '×1.00';
-      // if there is a queued bet and the current cycle transitions into flight, we will handle
     } else {
+      // CHANGE 2: Remove countdown during flight
       roundStateMsg.textContent = 'Flight — live';
-      roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
+      roundTimer.textContent = '--'; // Remove countdown during flight
       const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated);
       liveMultiplierEl.textContent = '×' + formatNumber(live);
     }
@@ -625,111 +625,14 @@
   setInterval(mainTick, 120);
 
   // ********** Canvas: plane animation **********
-  function drawPlane(progress, generated, burst){
-    // progress: 0..1 across flight (if not in flight, provide idle progress)
-    // plane path: x goes from left->right, y follows parabola shape (0..1 => bottom->top->bottom small amplitude)
-    const w = planeCanvas.clientWidth;
-    const h = planeCanvas.clientHeight;
-    ctx.clearRect(0,0,w,h);
-    // background grid lightly
-    // Draw a faint horizon
-    ctx.fillStyle = '#071018';
-    ctx.fillRect(0,0,w,h);
-
-    const margin = 40;
-    const width = w - margin*2;
-    const height = h - margin*2;
-    // compute x in [0, width], y in [height, 0] (0 at bottom)
-    const t = Math.max(0, Math.min(progress,1));
-    const x = margin + t * width;
-    // simple parabola apex near t=0.6 for pleasing path: y = -4*(t-0.5)^2 + 1
-    const yRel = -4*(t-0.5)*(t-0.5) + 1; // range [-? ,1]
-    // normalize to [0,1]
-    const yNorm = Math.max(0, Math.min((yRel + 0.0)/1,1));
-    const y = margin + (1 - yNorm) * height;
-
-    // draw path (light)
-    ctx.beginPath();
-    for(let i=0;i<=100;i++){
-      const tt = i/100;
-      const xx = margin + tt * width;
-      const yR = -4*(tt-0.5)*(tt-0.5) + 1;
-      const yy = margin + (1 - Math.max(0,Math.min(yR,1))) * height;
-      if(i===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
-    }
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    ctx.stroke();
-
-    // draw plane (image or triangle)
-    const planeW = 46;
-    const planeH = 28;
-    ctx.save();
-    ctx.translate(x, y);
-    // rotation along tangent approximate (derivative)
-    const dx = 8;
-    const tAhead = Math.min(1, t + 0.02);
-    const x2 = margin + tAhead * width;
-    const yRel2 = -4*(tAhead-0.5)*(tAhead-0.5) +1;
-    const yNorm2 = Math.max(0, Math.min((yRel2)/1,1));
-    const y2 = margin + (1 - yNorm2) * height;
-    const angle = Math.atan2(y2 - y, x2 - x);
-    ctx.rotate(angle);
-
-    if(planeImg && planeImg.complete){
-      ctx.drawImage(planeImg, -planeW/2, -planeH/2, planeW, planeH);
-    } else {
-      // fallback: small triangle
-      ctx.fillStyle = '#f05';
-      ctx.beginPath();
-      ctx.moveTo(0,-10);
-      ctx.lineTo(16,0);
-      ctx.lineTo(0,10);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // draw burst indicator if near end
-    if(burst){
-      ctx.fillStyle = 'rgba(240,200,0,0.06)';
-      ctx.beginPath();
-      ctx.arc(x, y, 60, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-
-  function animLoop(){
-    const info = getCurrentRoundInfo();
-    let progress = 0;
-    let generated = MULTIPLIERS[info.roundIndex];
-    let burst = false;
-    if(info.phase === 'pre'){
-      // idle motion: gentle oscillation
-      const t = ((now()%2000)/2000);
-      progress = 0.05 + 0.02*Math.sin(t*Math.PI*2) + 0.2; // small offset
-    } else {
-      const ratio = Math.max(0, Math.min(info.phaseElapsed / FLIGHT, 1));
-      // we map ratio to progress with slight easing to look like plane accelerating upwards
-      progress = Math.pow(ratio, 0.9);
-      // burst when ratio close to 1
-      burst = ratio >= 0.985;
-    }
-    drawPlane(progress, generated, burst);
-    requestAnimationFrame(animLoop);
-  }
-  // start animations after first resize
-  window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
-
-  // ********** periodic housekeeping: when flight ends, settle round and push past **********
-  // We use mainTick and the past push logic already handles this.
+  // REMOVED PLANE ANIMATION: Deleted drawPlane and animLoop entirely.
 
   // ********** UI actions **********
   withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy). GitHub will log the click.'); });
   depositBtn.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
-    const amt = Number(prompt('Enter amount to deposit (demo):', '100')) || 0;
-    if(amt<=0) return;
+    const amt = Number(prompt('Enter amount to deposit ():', '0')) || 0;
+    if(amt=0) return;
     accounts = loadAccounts();
     accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
     saveAccounts(accounts);
@@ -763,6 +666,9 @@
   }
   init();
 
+  // REMOVED PLANE ANIMATION: Remove animation start line
+  // window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
+
   // onbeforeunload -> require login again if they close tab? User wants to re-login when visiting other apps.
   // We'll preserve session but require login if they explicitly log out. The user asked: "Ask to log in again if someone Log out Visit other apps Visit other links" — we can't detect app switching; but leaving page and returning keeps session. If they want always re-login we could clear session on visibilitychange hidden; but that would be annoying. We'll clear session on pagehide to match their note that visiting other apps should ask login.
   window.addEventListener('pagehide', ()=>{ /* intentionally do nothing to preserve session */ });
@@ -793,4 +699,4 @@
 })();
 </script>
 </body>
-  </html>
+        </html>
