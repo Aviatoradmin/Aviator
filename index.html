@@ -127,7 +127,7 @@
       <div style="padding:8px 2px;">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;color:var(--muted)">Past 10 multipliers</div>
-          <div style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
+          <div id="countdownBox" style="font-size:13px;color:var(--muted)">Round time: <span id="roundTimer">--</span></div>
         </div>
         <div class="past-list" id="pastList" style="margin-top:6px"></div>
       </div>
@@ -225,8 +225,8 @@
 <script>
 /*
   Aviator single-file implementation
-  - Uses fixed 10s cycle: 5s pre-round (betting), 5s flight
-  - Generated multipliers array (1..250) embedded (from user)
+  - Now uses variable flight time based on constant growth rate.
+  - Pre-round is fixed at 5s.
   - Accounts stored in localStorage under key 'avi_accounts'
   - Session stored in localStorage under 'avi_session' (phone)
   - Past-10 multipliers saved in localStorage 'avi_past'
@@ -234,10 +234,12 @@
 
 (() => {
   // ********** CONFIG **********
-  const PRE_ROUND = 5_000;   // ms (betting countdown)
-  const FLIGHT = 5_000;      // ms (flight duration)
-  const CYCLE = PRE_ROUND + FLIGHT; // 10s
+  const PRE_ROUND = 5_000;         // ms (betting countdown) - FIXED
+  const BASE_RATE_MS = 1500;       // ms (Time taken for multiplier to grow to x2.718 (e)) - This sets the constant speed.
   const DEFAULT_BALANCE = 1000;
+  
+  // NOTE: CYCLE and FLIGHT are now dynamic based on the generated multiplier and BASE_RATE_MS
+  
   const MULTIPLIERS = [
     1.27,2.14,1.03,3.82,7.41,1.56,1.11,4.27,12.49,1.24,2.71,1.09,8.35,1.63,1.02,5.42,2.03,1.18,3.54,10.83,
     1.15,1.07,6.48,2.32,1.95,1.04,1.34,9.64,1.13,3.09,1.26,4.91,2.67,1.08,1.52,1.21,14.72,1.03,2.18,1.09,
@@ -300,6 +302,7 @@
   const plus50 = document.getElementById('plus50');
   const roundStateMsg = document.getElementById('roundStateMsg');
   const planeCanvas = document.getElementById('planeCanvas');
+  const countdownBox = document.getElementById('countdownBox'); // Added for the hide/show logic
 
   // auth fields
   const loginPhone = document.getElementById('loginPhone');
@@ -350,34 +353,90 @@
   }
 
   // ********** ROUND / MULTIPLIER SCHEDULE **********
-  // We use fixed length cycles of CYCLE ms. Round index = floor(now / CYCLE) % TOTAL
-  // Pre-round: [0, PRE_ROUND) => betting allowed, queued bets possible
-  // Flight: [PRE_ROUND, CYCLE) => live multiplier increases from 1 to generatedMultiplier
+  // We determine the CYCLE based on the generated multiplier and the constant rate.
 
   function getRoundIndexForTime(t){
-    const idx = Math.floor(t / CYCLE) % TOTAL;
-    return idx;
-  }
-  function getRoundStartTimeForIndex(i){
-    // find the first time (>=0 epoch) where floor(t/CYCLE) % TOTAL == i
-    // easiest: compute cycles since epoch and adjust
-    const cyclesSinceEpoch = Math.floor(Date.now() / CYCLE);
-    // compute currentIndex and difference
-    const currentIndex = cyclesSinceEpoch % TOTAL;
-    const diff = (i - currentIndex + TOTAL) % TOTAL;
-    return (cyclesSinceEpoch + diff) * CYCLE;
+    // Since cycle length is dynamic, we must use a fixed base to determine the index.
+    // We'll calculate the cumulative time passed using the BASE_RATE_MS and the log of the multiplier
+    
+    let cumulativeTime = 0;
+    let roundIndex = 0;
+    const baseLog = Math.log(MULTIPLIERS[0] || 1.01);
+    
+    // Safety check for empty multipliers: 
+    if(MULTIPLIERS.length === 0) return 0;
+
+    // Estimate the current round index based on cumulative flight time
+    // This logic is complex for dynamic cycle lengths, so we'll simplify: 
+    // We MUST use fixed round starts (e.g., every 10s) to index the array.
+    // To implement variable length, we must calculate the exact start time of *every* round.
+    
+    // We'll calculate the list of all cycle start times (relative to a fixed epoch, like when the app first ran)
+    // NOTE: This array needs to be recalculated only when multipliers changes, but we'll do it once.
+    // We will assume the cycle starts relative to the epoch time 0 (1970).
+    // In a real game, the server tells the client the start time of the *next* round.
+    
+    // Since we don't have a server, let's calculate the cumulative duration of all 250 rounds
+    const TOTAL_DURATION = MULTIPLIERS.reduce((sum, M) => {
+        const flightTime = Math.log(M || 1.01) * BASE_RATE_MS;
+        return sum + PRE_ROUND + flightTime;
+    }, 0); 
+    
+    // Find how many full cycles of 250 multipliers have passed since epoch, using the total duration
+    // This is mathematically tricky to do accurately on the client side without a server clock.
+    // Given the previous model used a fixed 10s cycle, the simplest way to introduce variability
+    // while keeping array indexing simple is to use the fixed 10s cycle for indexing ONLY
+    // and rely on the variable FLIGHT calculation *within* the round itself.
+    // Let's revert the array indexing to the simpler fixed-cycle model for stability:
+    
+    const FIXED_CYCLE_FOR_INDEXING = PRE_ROUND + BASE_RATE_MS * 3; // Approx 10s base for array indexing
+    const fixedCycleIndex = Math.floor(t / FIXED_CYCLE_FOR_INDEXING);
+    const fixedRoundIndex = fixedCycleIndex % TOTAL;
+    
+    return fixedRoundIndex;
   }
 
   function getCurrentRoundInfo(){
     const t = now();
-    const cycleIndex = Math.floor(t / CYCLE);
-    const roundIndex = cycleIndex % TOTAL;
-    const cycleStart = cycleIndex * CYCLE;
-    const elapsed = t - cycleStart;
-    const phase = (elapsed < PRE_ROUND) ? 'pre' : 'flight';
-    const phaseElapsed = (phase === 'pre') ? elapsed : (elapsed - PRE_ROUND);
-    const phaseRemaining = (phase === 'pre') ? (PRE_ROUND - elapsed) : (CYCLE - elapsed);
+    const roundIndex = getRoundIndexForTime(t);
     const generated = MULTIPLIERS[roundIndex];
+    
+    // 1. Calculate the actual Flight Duration for this specific multiplier
+    const flightTime = Math.log(generated || 1.01) * BASE_RATE_MS;
+    // Cap flight time to a maximum reasonable value (e.g., 20 seconds for x250)
+    const FLIGHT_ACTUAL = Math.min(20000, Math.max(100, flightTime)); 
+    const CYCLE_ACTUAL = PRE_ROUND + FLIGHT_ACTUAL;
+
+    // 2. Determine the current round's start time by calculating the duration of all previous rounds 
+    // This is the part that fails without a server, so we must rely on the FIXED_CYCLE_FOR_INDEXING from above
+    // for finding the start time, and then apply the ACTUAL_CYCLE length to the elapsed time.
+    
+    const FIXED_CYCLE_FOR_INDEXING = PRE_ROUND + BASE_RATE_MS * 3;
+    const cycleIndex = Math.floor(t / FIXED_CYCLE_FOR_INDEXING);
+    const cycleStart = cycleIndex * FIXED_CYCLE_FOR_INDEXING;
+    
+    // Calculate actual elapsed time since the fixed start time
+    const elapsed = t - cycleStart;
+    
+    // 3. Determine Phase and remaining time based on ACTUAL calculated cycle length
+    const phase = (elapsed < PRE_ROUND) ? 'pre' : (elapsed < CYCLE_ACTUAL ? 'flight' : 'ended');
+    
+    let phaseElapsed = 0;
+    let phaseRemaining = 0;
+    
+    if (phase === 'pre') {
+        phaseElapsed = elapsed;
+        phaseRemaining = PRE_ROUND - elapsed;
+    } else if (phase === 'flight') {
+        phaseElapsed = elapsed - PRE_ROUND;
+        phaseRemaining = FLIGHT_ACTUAL - phaseElapsed;
+    } else {
+        // If the elapsed time is greater than the ACTUAL flight time, the round should be considered ended
+        // The index will change on the next fixed boundary tick.
+        phaseElapsed = FLIGHT_ACTUAL;
+        phaseRemaining = 0;
+    }
+
     return {
       roundIndex,
       generated,
@@ -385,16 +444,26 @@
       phaseElapsed,
       phaseRemaining,
       elapsed,
-      cycleStart
+      cycleStart,
+      FLIGHT_ACTUAL
     };
   }
 
-  // live multiplier value during flight: linear from 1 -> generated over FLIGHT ms
-  function getLiveMultiplier(phase, phaseElapsed, generated){
+  // live multiplier value during flight: exponential based on constant rate
+  function getLiveMultiplier(phase, phaseElapsed, generated, flightDuration){
     if(phase !== 'flight') return 1.00;
-    const t = Math.max(0, Math.min(phaseElapsed, FLIGHT));
-    const ratio = t / FLIGHT;
-    return 1 + (generated - 1) * ratio;
+    const t = Math.max(0, Math.min(phaseElapsed, flightDuration));
+    
+    if (generated <= 1.0) return 1.00;
+    
+    // Formula: M(t) = e ^ (t / BASE_RATE_MS)
+    // The previous formula M(t) = e ^ ( (t / FLIGHT) * ln(generated) ) forced the multiplier to hit 'generated' at FLIGHT time.
+    // The NEW desired formula is independent of FLIGHT_ACTUAL: M(t) = e ^ (t / BASE_RATE_MS)
+    
+    const liveMult = Math.exp(t / BASE_RATE_MS);
+    
+    // Ensure the multiplier does not exceed the target value (generated)
+    return Math.min(liveMult, generated);
   }
 
   // ********** PAST LIST **********
@@ -530,7 +599,9 @@
       const ri = activeBet.roundIndex;
       const generated = MULTIPLIERS[ri];
       const info = getCurrentRoundInfo();
-      const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated);
+      // Use the actual flight duration for cashout calculation boundary check
+      const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated, info.FLIGHT_ACTUAL); 
+      
       const win = activeBet.amount * live;
       accounts = loadAccounts();
       accounts[currentUser].balance = Number(accounts[currentUser].balance) + win;
@@ -563,19 +634,31 @@
     // update past list rendering
     renderPast();
 
-    // update phase text / timer
+    // ************* FEATURE 1 & 2 IMPLEMENTATION *************
     if(info.phase === 'pre'){
-      // CHANGE 2 & 3: Keep pre-round countdown, change message
-      roundStateMsg.textContent = 'Betting — Next round starts in';
+      // 2. Rename 5 second countdown to "Draw in (value countdown)"
+      roundStateMsg.textContent = 'Betting — Draw in'; 
       roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
       liveMultiplierEl.textContent = '×1.00';
-    } else {
-      // CHANGE 2: Remove countdown during flight
-      roundStateMsg.textContent = 'Flight — live';
-      roundTimer.textContent = '--'; // Remove countdown during flight
-      const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated);
-      liveMultiplierEl.textContent = '×' + formatNumber(live);
+      // Show countdown during pre-round
+      countdownBox.style.display = 'block'; 
+    } else { // info.phase === 'flight' or 'ended'
+      // 1. Hide round countdown during flight (everything including the name)
+      countdownBox.style.display = 'none'; 
+      
+      if(info.phase === 'flight') {
+        roundStateMsg.textContent = 'Flight — live';
+        // Display the actual flight time dynamically during flight (although hidden)
+        roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
+        const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
+        liveMultiplierEl.textContent = '×' + formatNumber(live);
+      } else { // info.phase === 'ended'
+        roundStateMsg.textContent = 'Waiting...';
+        liveMultiplierEl.textContent = '×1.00';
+      }
     }
+    // ********************************************************
+
 
     // phase transitions
     if(lastRoundIndex === null) lastRoundIndex = idx;
@@ -592,7 +675,6 @@
 
     // If this is a new round and we are in PRE_ROUND now, nothing else
     // Now: if we are just going from PRE_ROUND to FLIGHT and there is queuedBet, make it active and deduct
-    // We can detect the exact moment when phaseElapsed crosses PRE_ROUND
     // We'll detect when phase is 'flight' and we have queuedBet -> make active if not already active
     if(info.phase === 'flight'){
       if(queuedBet && !activeBet){
@@ -610,9 +692,6 @@
         }
       }
     }
-
-    // if flight is active for this round and activeBet exists and was not cashed yet, cashout possible.
-    // If flight ended this tick (i.e., near end), then settle losing bets: handled when nextIndex != lastRoundIndex earlier
 
     // Update bet UI
     updateBetUI();
@@ -694,9 +773,9 @@
   window.setInterval(()=>{ accounts = loadAccounts(); if(currentUser) { userObj = accounts[currentUser]; if(userObj) balanceBox.textContent = String(Math.round(userObj.balance*100)/100); } }, 2000);
 
   // expose small debug on console
-  console.log('Aviator demo initialized. Rounds every ' + (CYCLE/1000) + 's. Total multipliers:', TOTAL);
+  console.log('Aviator demo initialized. Rounds every ' + (PRE_ROUND/1000) + 's betting phase. Flight time is now variable based on multiplier: FLIGHT = ln(M) * ' + BASE_RATE_MS + 'ms.');
 
 })();
 </script>
 </body>
-        </html>
+            </html>
