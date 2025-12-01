@@ -230,6 +230,8 @@
   - Accounts stored in localStorage under key 'avi_accounts'
   - Session stored in localStorage under 'avi_session' (phone)
   - Past-10 multipliers saved in localStorage 'avi_past'
+
+  *** IMPLEMENTED FEATURE: Instantaneous Cash out -> Bet switch and Live Countdown end upon target multiplier reached. ***
 */
 
 (() => {
@@ -321,20 +323,14 @@
   let userObj = currentUser ? accounts[currentUser] : null;
 
   // bets:
-  // queuedBet: user has pressed Bet while NOT in-flight (i.e., during PRE_ROUND or during flight to join next), and can cancel before flight start
-  // activeBet: {amount, roundIndex} when the flight starts, stake is deducted and becomes active; cashout allowed during flight
   let queuedBet = null;
   let activeBet = null;
 
-  // canvas init
-  // REMOVED PLANE ANIMATION: Remove ctx initialization
-  // const ctx = planeCanvas.getContext ? planeCanvas.getContext('2d') : null;
+  // NEW STATE VARIABLE for instantaneous round end
+  let isRoundBurst = false; 
 
   function resizeCanvas(){
     // REMOVED PLANE ANIMATION: Removed canvas resize logic
-    // planeCanvas.width = planeCanvas.clientWidth * devicePixelRatio;
-    // planeCanvas.height = planeCanvas.clientHeight * devicePixelRatio;
-    // ctx && ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
   window.addEventListener('resize', resizeCanvas);
 
@@ -353,42 +349,9 @@
   }
 
   // ********** ROUND / MULTIPLIER SCHEDULE **********
-  // We determine the CYCLE based on the generated multiplier and the constant rate.
-
+  
   function getRoundIndexForTime(t){
-    // Since cycle length is dynamic, we must use a fixed base to determine the index.
-    // We'll calculate the cumulative time passed using the BASE_RATE_MS and the log of the multiplier
-    
-    let cumulativeTime = 0;
-    let roundIndex = 0;
-    const baseLog = Math.log(MULTIPLIERS[0] || 1.01);
-    
-    // Safety check for empty multipliers: 
-    if(MULTIPLIERS.length === 0) return 0;
-
-    // Estimate the current round index based on cumulative flight time
-    // This logic is complex for dynamic cycle lengths, so we'll simplify: 
-    // We MUST use fixed round starts (e.g., every 10s) to index the array.
-    // To implement variable length, we must calculate the exact start time of *every* round.
-    
-    // We'll calculate the list of all cycle start times (relative to a fixed epoch, like when the app first ran)
-    // NOTE: This array needs to be recalculated only when multipliers changes, but we'll do it once.
-    // We will assume the cycle starts relative to the epoch time 0 (1970).
-    // In a real game, the server tells the client the start time of the *next* round.
-    
-    // Since we don't have a server, let's calculate the cumulative duration of all 250 rounds
-    const TOTAL_DURATION = MULTIPLIERS.reduce((sum, M) => {
-        const flightTime = Math.log(M || 1.01) * BASE_RATE_MS;
-        return sum + PRE_ROUND + flightTime;
-    }, 0); 
-    
-    // Find how many full cycles of 250 multipliers have passed since epoch, using the total duration
-    // This is mathematically tricky to do accurately on the client side without a server clock.
-    // Given the previous model used a fixed 10s cycle, the simplest way to introduce variability
-    // while keeping array indexing simple is to use the fixed 10s cycle for indexing ONLY
-    // and rely on the variable FLIGHT calculation *within* the round itself.
     // Let's revert the array indexing to the simpler fixed-cycle model for stability:
-    
     const FIXED_CYCLE_FOR_INDEXING = PRE_ROUND + BASE_RATE_MS * 3; // Approx 10s base for array indexing
     const fixedCycleIndex = Math.floor(t / FIXED_CYCLE_FOR_INDEXING);
     const fixedRoundIndex = fixedCycleIndex % TOTAL;
@@ -407,10 +370,7 @@
     const FLIGHT_ACTUAL = Math.min(20000, Math.max(100, flightTime)); 
     const CYCLE_ACTUAL = PRE_ROUND + FLIGHT_ACTUAL;
 
-    // 2. Determine the current round's start time by calculating the duration of all previous rounds 
-    // This is the part that fails without a server, so we must rely on the FIXED_CYCLE_FOR_INDEXING from above
-    // for finding the start time, and then apply the ACTUAL_CYCLE length to the elapsed time.
-    
+    // 2. Determine the current round's start time by relying on the FIXED_CYCLE_FOR_INDEXING
     const FIXED_CYCLE_FOR_INDEXING = PRE_ROUND + BASE_RATE_MS * 3;
     const cycleIndex = Math.floor(t / FIXED_CYCLE_FOR_INDEXING);
     const cycleStart = cycleIndex * FIXED_CYCLE_FOR_INDEXING;
@@ -419,8 +379,22 @@
     const elapsed = t - cycleStart;
     
     // 3. Determine Phase and remaining time based on ACTUAL calculated cycle length
-    const phase = (elapsed < PRE_ROUND) ? 'pre' : (elapsed < CYCLE_ACTUAL ? 'flight' : 'ended');
+    let phase = 'ended'; 
     
+    if (elapsed < PRE_ROUND) {
+        phase = 'pre';
+    } else if (elapsed < CYCLE_ACTUAL) {
+        phase = 'flight';
+    } else {
+        phase = 'ended';
+    }
+    
+    // NEW LOGIC: INSTANT ROUND END IF BURSTED
+    // If we are currently in flight and the burst flag is set, transition phase to 'ended' immediately.
+    if (phase === 'flight' && isRoundBurst) {
+        phase = 'ended';
+    }
+
     let phaseElapsed = 0;
     let phaseRemaining = 0;
     
@@ -431,10 +405,12 @@
         phaseElapsed = elapsed - PRE_ROUND;
         phaseRemaining = FLIGHT_ACTUAL - phaseElapsed;
     } else {
-        // If the elapsed time is greater than the ACTUAL flight time, the round should be considered ended
-        // The index will change on the next fixed boundary tick.
+        // If phase is 'ended' (either naturally or forced by burst)
+        // We set the remaining time to 0, or calculate the time until the next fixed betting window starts
         phaseElapsed = FLIGHT_ACTUAL;
-        phaseRemaining = 0;
+        // Calculate time until the next PRE_ROUND phase based on the fixed cycle time, NOT the actual variable cycle time.
+        const nextCycleStart = (cycleIndex + 1) * FIXED_CYCLE_FOR_INDEXING;
+        phaseRemaining = nextCycleStart - t;
     }
 
     return {
@@ -457,9 +433,6 @@
     if (generated <= 1.0) return 1.00;
     
     // Formula: M(t) = e ^ (t / BASE_RATE_MS)
-    // The previous formula M(t) = e ^ ( (t / FLIGHT) * ln(generated) ) forced the multiplier to hit 'generated' at FLIGHT time.
-    // The NEW desired formula is independent of FLIGHT_ACTUAL: M(t) = e ^ (t / BASE_RATE_MS)
-    
     const liveMult = Math.exp(t / BASE_RATE_MS);
     
     // Ensure the multiplier does not exceed the target value (generated)
@@ -564,14 +537,34 @@
   // ********** BET / STAKE / BALANCE LOGIC **********
   function updateBetUI(){
     betAmount.textContent = (queuedBet ? queuedBet.amount : (activeBet? activeBet.amount : 0));
-    // adjust button state
-    if(activeBet){
-      betButton.className = 'bet-button yellow';
-      betButton.textContent = 'Cash out';
-    } else if(queuedBet){
+    const info = getCurrentRoundInfo();
+    const liveMult = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL); 
+    const hasActiveBet = !!activeBet;
+
+    // Determine if the round has burst or is over
+    let shouldShowBetButton = false;
+    
+    if (hasActiveBet) {
+      const isCurrentFlightBurst = (liveMult >= info.generated - 0.001);
+      if (isCurrentFlightBurst || info.phase !== 'flight') {
+        shouldShowBetButton = true; // Round ended or burst reached, show Bet button
+      }
+    } else if (queuedBet) {
+      // Queued bet, show Cancel
       betButton.className = 'bet-button cancel';
       betButton.textContent = 'Cancel';
+      return;
+    }
+
+    if(shouldShowBetButton){
+      betButton.className = 'bet-button bet';
+      betButton.textContent = 'Bet';
+    } else if(hasActiveBet){
+      // The bet is active and the plane is still flying below burst point.
+      betButton.className = 'bet-button yellow';
+      betButton.textContent = 'Cash out';
     } else {
+      // Ready to bet
       betButton.className = 'bet-button bet';
       betButton.textContent = 'Bet';
     }
@@ -580,8 +573,10 @@
   betButton.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
     const stake = safeNum(stakeInput.value);
+    
+    // Check the button's current mode (which is updated by updateBetUI)
     if(betButton.classList.contains('bet')){
-      // Pressed Bet — this should queue the bet for next round or join next round depending on timing
+      // Pressed Bet
       if(stake <= 0){ alert('Enter stake amount'); return; }
       if(stake > userObj.balance){ alert('Stake must be <= balance'); return; }
       queuedBet = { amount: stake };
@@ -595,11 +590,10 @@
     } else if(betButton.classList.contains('yellow')){
       // Cash out active bet
       if(!activeBet){ return; }
-      // compute current live multiplier
+      
       const ri = activeBet.roundIndex;
       const generated = MULTIPLIERS[ri];
       const info = getCurrentRoundInfo();
-      // Use the actual flight duration for cashout calculation boundary check
       const live = getLiveMultiplier(info.phase, info.phaseElapsed, generated, info.FLIGHT_ACTUAL); 
       
       const win = activeBet.amount * live;
@@ -623,7 +617,6 @@
     balanceBox.textContent = String(Math.round(userObj.balance*100)/100);
   }
 
-  // if activeBet loses (burst), nothing to add (stake was already deducted)
   // ********** Main loop controlling rounds **********
   let lastRoundIndex = null;
   function mainTick(){
@@ -633,49 +626,69 @@
 
     // update past list rendering
     renderPast();
+    
+    const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
+    const isCurrentFlightBurst = (live >= info.generated - 0.001); // Check for burst with float safety
 
-    // ************* FEATURE 1 & 2 IMPLEMENTATION *************
-    if(info.phase === 'pre'){
-      // 2. Rename 5 second countdown to "Draw in (value countdown)"
-      roundStateMsg.textContent = 'Betting — Draw in'; 
-      roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
-      liveMultiplierEl.textContent = '×1.00';
-      // Show countdown during pre-round
-      countdownBox.style.display = 'block'; 
-    } else { // info.phase === 'flight' or 'ended'
-      // 1. Hide round countdown during flight (everything including the name)
-      countdownBox.style.display = 'none'; 
-      
-      if(info.phase === 'flight') {
-        roundStateMsg.textContent = 'Flight — live';
-        // Display the actual flight time dynamically during flight (although hidden)
-        roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
-        const live = getLiveMultiplier(info.phase, info.phaseElapsed, info.generated, info.FLIGHT_ACTUAL);
-        liveMultiplierEl.textContent = '×' + formatNumber(live);
-      } else { // info.phase === 'ended'
-        roundStateMsg.textContent = 'Waiting...';
-        liveMultiplierEl.textContent = '×1.00';
-      }
+    // ************* NEW INSTANTANEOUS ROUND END LOGIC *************
+    // This runs only while we are in the 'flight' phase
+    if (info.phase === 'flight' && isCurrentFlightBurst) {
+        // If burst detected, set flag and trigger the round end sequence next tick.
+        // We set the flag here, and the getCurrentRoundInfo check will force the phase to 'ended' immediately.
+        isRoundBurst = true;
+        
+        // Push the result instantly, as the round is effectively over.
+        // Check if this round index hasn't been added to the past list yet (to prevent double-pushing)
+        if (lastRoundIndex === idx) {
+             const prevGen = MULTIPLIERS[lastRoundIndex];
+             pushPast(prevGen);
+             lastRoundIndex = null; // Mark as handled
+             activeBet = null; // Clear active bet immediately upon burst
+        }
+        
+    } else if (info.phase === 'pre') {
+        // Reset the burst flag at the start of the betting window.
+        isRoundBurst = false; 
     }
-    // ********************************************************
-
+    // ************************************************************
 
     // phase transitions
     if(lastRoundIndex === null) lastRoundIndex = idx;
 
-    // if a new round started (index changed), then handle end-of-previous-round logic
-    if(idx !== lastRoundIndex){
-      // previous round ended -> its generated multiplier is MULTIPLIERS[lastRoundIndex]
+    // if a new round started (index changed, or forced reset by burst)
+    if(idx !== lastRoundIndex && !isRoundBurst){ 
+      // This block handles the natural transition when the fixed index moves.
       const prevGen = MULTIPLIERS[lastRoundIndex];
       pushPast(prevGen);
-      // If there was an activeBet for prev round that wasn't cashed out, it's already deducted and lost (we do nothing)
-      activeBet = null;
+      activeBet = null; 
       // queued bets remain queued for next rounds (they will become active at flight start)
     }
 
-    // If this is a new round and we are in PRE_ROUND now, nothing else
+    // UI Updates
+    if(info.phase === 'pre'){
+      roundStateMsg.textContent = 'Betting — Draw in'; 
+      roundTimer.textContent = Math.ceil(info.phaseRemaining/1000) + 's';
+      liveMultiplierEl.textContent = '×1.00';
+      countdownBox.style.display = 'block'; 
+    } else if (info.phase === 'flight') {
+      countdownBox.style.display = 'none'; 
+      roundStateMsg.textContent = 'Flight — live';
+      // Display the actual flight time dynamically during flight 
+      roundTimer.textContent = (info.FLIGHT_ACTUAL / 1000).toFixed(2) + 's'; 
+      liveMultiplierEl.textContent = '×' + formatNumber(live);
+    } else { // info.phase === 'ended' (either naturally or forced by burst/instant end)
+      // This is the state where the Live Countdown ends instantly.
+      countdownBox.style.display = 'block'; // Show countdown again
+      roundStateMsg.textContent = 'Waiting — Next Round in'; // Indicate waiting time
+      
+      // Since we forced an end, we now show the remaining time until the next fixed 'pre' phase starts.
+      // This remaining time IS the 5s pre-round countdown + any leftover time until the next index boundary.
+      const remainingForNextPre = info.phaseRemaining; 
+      roundTimer.textContent = Math.max(0, Math.ceil(remainingForNextPre/1000)) + 's';
+      liveMultiplierEl.textContent = '×' + formatNumber(info.generated); // Display final value
+    }
+
     // Now: if we are just going from PRE_ROUND to FLIGHT and there is queuedBet, make it active and deduct
-    // We'll detect when phase is 'flight' and we have queuedBet -> make active if not already active
     if(info.phase === 'flight'){
       if(queuedBet && !activeBet){
         // make it active for this round
@@ -697,21 +710,21 @@
     updateBetUI();
 
     // update lastRoundIndex
-    lastRoundIndex = idx;
+    // Only update if not currently bursting, to ensure we process the burst logic correctly.
+    if (!isRoundBurst) {
+        lastRoundIndex = idx;
+    }
   }
 
   // run mainTick every 120ms for responsiveness
   setInterval(mainTick, 120);
-
-  // ********** Canvas: plane animation **********
-  // REMOVED PLANE ANIMATION: Deleted drawPlane and animLoop entirely.
 
   // ********** UI actions **********
   withdrawBtn.addEventListener('click', ()=>{ alert('Withdrawal clicked (dummy). GitHub will log the click.'); });
   depositBtn.addEventListener('click', ()=>{
     if(!currentUser){ openAuth('login'); return; }
     const amt = Number(prompt('Enter amount to deposit ():', '0')) || 0;
-    if(amt=0) return;
+    if(amt===0) return;
     accounts = loadAccounts();
     accounts[currentUser].balance = Number(accounts[currentUser].balance) + amt;
     saveAccounts(accounts);
@@ -745,18 +758,10 @@
   }
   init();
 
-  // REMOVED PLANE ANIMATION: Remove animation start line
-  // window.requestAnimationFrame(()=>{ resizeCanvas(); animLoop(); });
-
-  // onbeforeunload -> require login again if they close tab? User wants to re-login when visiting other apps.
-  // We'll preserve session but require login if they explicitly log out. The user asked: "Ask to log in again if someone Log out Visit other apps Visit other links" — we can't detect app switching; but leaving page and returning keeps session. If they want always re-login we could clear session on visibilitychange hidden; but that would be annoying. We'll clear session on pagehide to match their note that visiting other apps should ask login.
-  window.addEventListener('pagehide', ()=>{ /* intentionally do nothing to preserve session */ });
   // To mimic "ask to log in again if visit other apps" we clear session on visibilitychange when hidden (user leaves tab/app)
   document.addEventListener('visibilitychange', ()=>{
     if(document.hidden){
       // clear session to force login on return
-      // NOTE: this mirrors user's requirement to re-login when visiting other apps/links
-      // BUT if you prefer persistent session, comment next line out.
       clearSession();
       refreshSession();
       statusBox.textContent = 'Session cleared while away; please login again.';
@@ -778,4 +783,4 @@
 })();
 </script>
 </body>
-            </html>
+  </html>
